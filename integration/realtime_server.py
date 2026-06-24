@@ -104,18 +104,17 @@ def translate_single(text: str, source: str, target: str, use_ollama: bool) -> s
     tgt_name = LANG_NAMES.get(target, target)
 
     prompt = f"""Translate this subtitle from {src_name} to {tgt_name}.
+
 Rules:
 - Natural spoken language, not literal translation
 - Keep the same tone and style
-- For Chinese: ~15 chars max, no filler words
-- For English: ~40 chars max
 - Output ONLY the translation, nothing else
 
 Source: {text}
 Translation:"""
 
     messages = [
-        {"role": "system", "content": "You translate subtitles. Output only the translation."},
+        {"role": "system", "content": f"You translate subtitles from {src_name} to {tgt_name}. Output only the translation."},
         {"role": "user", "content": prompt},
     ]
     if use_ollama:
@@ -176,12 +175,23 @@ class RealtimeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         content_len = int(self.headers.get("Content-Length", "0"))
-        body = json.loads(self.rfile.read(content_len)) if content_len > 0 else {}
+        raw = self.rfile.read(content_len)
+        body = {}
+        if content_len > 0:
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                try:
+                    body = json.loads(raw.decode("gbk"))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    body = {}
 
         if self.path == "/translate":
             self._handle_translate(body)
         elif self.path == "/translate/batch":
             self._handle_translate_batch(body)
+        elif self.path == "/detect-lang":
+            self._handle_detect_lang(body)
         else:
             self._json(404, {"error": "not found"})
 
@@ -260,6 +270,39 @@ class RealtimeHandler(BaseHTTPRequestHandler):
                 print(f"[batch] LLM error: {e}", file=sys.stderr)
 
         self._json(200, {"results": results, "cached": len(texts) - len(misses), "total": len(texts)})
+
+    def _handle_detect_lang(self, body):
+        """Detect language from sample texts via Unicode range analysis."""
+        texts = body.get("texts", [])
+        if not texts:
+            self._json(400, {"error": "empty texts"})
+            return
+
+        sample = " ".join(texts[:5]).strip()
+        if not sample:
+            self._json(200, {"lang": "en", "confidence": 0})
+            return
+
+        scripts = {}
+        for ch in sample:
+            cp = ord(ch)
+            if 0x3040 <= cp <= 0x309F or 0x30A0 <= cp <= 0x30FF: scripts["ja"] = scripts.get("ja", 0) + 1
+            elif 0xAC00 <= cp <= 0xD7AF: scripts["ko"] = scripts.get("ko", 0) + 1
+            elif 0x0400 <= cp <= 0x04FF: scripts["ru"] = scripts.get("ru", 0) + 1
+            elif 0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF: scripts["zh"] = scripts.get("zh", 0) + 1
+            elif 0x0600 <= cp <= 0x06FF: scripts["ar"] = scripts.get("ar", 0) + 1
+            elif 0x0E00 <= cp <= 0x0E7F: scripts["th"] = scripts.get("th", 0) + 1
+            elif cp > 0x7F: scripts["latin"] = scripts.get("latin", 0) + 1
+            else: scripts["latin"] = scripts.get("latin", 0) + 1
+
+        best = max(scripts, key=scripts.get) if scripts else "en"
+        if best == "latin": best = "en"
+        if best == "zh" and scripts.get("ja", 0) > scripts.get("zh", 0) * 0.3: best = "ja"
+
+        total = sum(scripts.values())
+        win_count = scripts.get("latin", 0) if best == "en" and "latin" in scripts else scripts.get(best, 0)
+        conf = win_count / max(total, 1)
+        self._json(200, {"lang": best, "confidence": round(conf, 2)})
 
     def _use_ollama(self) -> bool:
         if not API_KEY:

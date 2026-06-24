@@ -5,10 +5,12 @@ const SERVER_DEFAULT = 'http://127.0.0.1:8739';
 // Load saved settings
 chrome.storage.local.get({
   enabled: true,
+  sourceLang: 'auto',
   targetLang: 'zh-CN',
   serverUrl: SERVER_DEFAULT,
 }, (items) => {
   document.getElementById('switch').checked = items.enabled;
+  document.getElementById('source-lang').value = items.sourceLang;
   document.getElementById('target-lang').value = items.targetLang;
   document.getElementById('server-url').value = items.serverUrl;
   checkServerStatus(items.serverUrl);
@@ -16,15 +18,26 @@ chrome.storage.local.get({
 
 // Toggle
 document.getElementById('switch').addEventListener('change', (e) => {
-  const v = e.target.checked;
-  chrome.storage.local.set({ enabled: v });
-  // 通知 content script (via storage change event)
+  chrome.storage.local.set({ enabled: e.target.checked });
 });
 
-// Language
+// Source language
+document.getElementById('source-lang').addEventListener('change', (e) => {
+  chrome.storage.local.set({ sourceLang: e.target.value });
+  // Validate: source != target
+  const target = document.getElementById('target-lang').value;
+  if (e.target.value !== 'auto' && e.target.value === target) {
+    document.getElementById('server-status').textContent = '源语言和目标语言不能相同';
+  }
+});
+
+// Target language
 document.getElementById('target-lang').addEventListener('change', (e) => {
-  const v = e.target.value;
-  chrome.storage.local.set({ targetLang: v });
+  chrome.storage.local.set({ targetLang: e.target.value });
+  const src = document.getElementById('source-lang').value;
+  if (src !== 'auto' && src === e.target.value) {
+    document.getElementById('server-status').textContent = '源语言和目标语言不能相同';
+  }
 });
 
 // Server URL

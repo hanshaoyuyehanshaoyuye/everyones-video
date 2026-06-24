@@ -38,20 +38,34 @@
 
 ---
 
-## Chrome 实时翻译 (v6.0)
+## Chrome 实时翻译 (v6.1)
 
-**打开 YouTube → 自动双语字幕。不下视频、不等处理、零 ASR 成本。**
+**任意网页视频 → 自动双语字幕。不下视频、不等处理、零 ASR 成本。**
+
+### 支持平台
+
+| 平台 | 字幕源 | 方式 |
+|------|--------|------|
+| **YouTube** | timedtext API | XML 拦截 |
+| **Bilibili** | 播放器 API | getCaptions() + subtitle API |
+| **Vimeo / Coursera / …** | `<track>` WebVTT | 自动拉取 |
+| **任意网站** | XHR/fetch 响应 | SRT/VTT/JSON 模式匹配 |
 
 ### 原理
 
 ```
-YouTube 视频
+任意网页 <video>
     │
     ▼
-content.js 拦截 timedtext API ── 拿到原始字幕 XML
+平台检测 → 匹配字幕源适配器
+    │
+    ├─ YouTube → 拦截 timedtext XML
+    ├─ Bilibili → player.getCaptions() / subtitle API
+    ├─ <track>  → fetch WebVTT
+    └─ 通用     → XHR/fetch 模式匹配 (SRT/VTT/JSON)
     │
     ▼
-POST /translate/batch → realtime_server.py (127.0.0.1:8739)
+POST /translate/batch → realtime_server.py
     │
     ├─ TM 命中 → <1ms 直接返回
     └─ TM 未命中 → DeepSeek/Ollama → 写入 TM
@@ -70,15 +84,16 @@ python3 integration/realtime_server.py &
 # 2. 加载扩展
 # Chrome → 扩展程序 → 开发者模式 → "加载已解压的扩展程序" → 选 extension/ 目录
 
-# 3. 打开任意 YouTube 视频，开启字幕
+# 3. 打开任意视频网站 (YouTube/Bilibili/Vimeo/…)，开启字幕
 ```
 
 ### 特性
 
-- **零下载**：拦截 YouTube 自带 timedtext，不调用 yt-dlp
+- **多平台**: YouTube · Bilibili · Vimeo · Coursera · 任意 `<track>` / fetch 字幕源
+- **零下载**：拦截平台自带字幕，不调用 yt-dlp
 - **零延迟感**：TM 缓存命中 <1ms，LLM 翻译 ~300ms
 - **同视频复看免费**：翻译缓存到 TM，二次观看 100% 命中，不调 API
-- **11 语种**：中文、日本語、한국어、Français、Deutsch、Español 等
+- **12 语种互通**：中日韩俄德法西葡阿 + 英文。Unicode 自动检测源语言 + 手动指定
 - **Alt+T 开关**，**Alt+L 切语言**
 
 ---

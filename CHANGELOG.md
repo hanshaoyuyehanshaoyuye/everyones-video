@@ -4,6 +4,31 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [6.2.0] — Unreleased
+
+### Added
+- **多语种实时翻译**: 日🇯🇵 韩🇰🇷 俄🇷🇺 德🇩🇪 法🇫🇷 西🇪🇸 葡🇧🇷 阿🇸🇦, 12 语种互通。
+  - `popup.html/js`: 源语言选择 + "自动检测", 源/目标语言冲突提示。
+  - `content.js`: Unicode 范围自动检测 (CJK/Hangul/Kana/Cyrillic/Arabic/Latin), 采样前 5 条字幕。
+  - `realtime_server.py --detect-lang`: 服务端语言检测端点, 置信度评分。
+  - LLM prompt 语言无关化: 自动适配任意语言对的长度/风格约束。
+
+### Changed
+- Extension 不再硬编码源语言 (之前 YouTube=en, Bilibili=zh), 全面切换为 auto。
+- `/detect-lang` POST endpoint: 接收字幕文本数组, 返回 `{lang, confidence}`。
+
+## [6.1.0] — Unreleased
+
+### Changed
+- **Extension 多平台支持**: 不再只限 YouTube。
+  - `content.js`: 平台检测层 + 4 种字幕源适配器。
+  - **YouTube**: timedtext XML 拦截 (原有)。
+  - **Bilibili**: player.getCaptions() API + subtitle API 代理。
+  - **&lt;track&gt; WebVTT**: 任意 `<video>` + `<track kind="subtitles">` 自动拉取 WebVTT (Vimeo/Coursera/…)。
+  - **通用 fetch**: 拦截所有 XHR/fetch 中 SRT/VTT/JSON 字幕响应, 兜底未知平台。
+  - `manifest.json`: host_permissions 放宽到 `https://*/*`。
+- JSON 字幕解析: 支持 5 种常见格式 (YouTube JSON / Bilibili body / WebVTT / SRT / word-level)。
+
 ## [6.0.0] — Unreleased
 
 ### Added
