@@ -4,6 +4,19 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [6.0.0] — Unreleased
+
+### Added
+- **Chrome Extension** (`extension/`): YouTube 实时双语字幕, MIT 开源, 零下载零等待。
+  - `content.js`: 三阶段 — 拦截 YouTube timedtext API → 解析 XML 预翻译 → rAF 轮询播放时间匹配 cue → DOM 叠加双语字幕。
+  - `popup.html/js`: 开关 / 11 语种切换 / 服务器状态指示。
+  - `overlay.css`: 半透明黑底金字叠加层, 不干扰视频控制。
+- **realtime_server.py**: 极简 HTTP 后端 (127.0.0.1:8739)。
+  - `POST /translate`: 单条翻译, TM 命中 <1ms, LLM 回退 ~300ms。
+  - `POST /translate/batch`: 批量预翻译, 拦截 timedtext 后一次性送译。
+  - 复用现有 TM + call_llm, 无额外依赖。
+  - TM 自动落盘, 同视频复看 100% 缓存命中。
+
 ## [5.2.0] — Unreleased
 
 ### Added

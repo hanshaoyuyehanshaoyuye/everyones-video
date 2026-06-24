@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>实时双语字幕</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 280px;
+    padding: 16px;
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    font-size: 14px;
+    background: #1a1a2e;
+    color: #e0e0e0;
+  }
+  h2 { font-size: 16px; margin-bottom: 12px; color: #FFEB3B; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  label { flex: 1; }
+  select, button {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #2a2a3e;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  select { width: 120px; }
+  .toggle { position: relative; width: 44px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: #555; border-radius: 24px; cursor: pointer; transition: 0.2s;
+  }
+  .toggle .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s;
+  }
+  .toggle input:checked + .slider { background: #66BB6A; }
+  .toggle input:checked + .slider::before { transform: translateX(20px); }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+  .dot.ok { background: #66BB6A; }
+  .dot.err { background: #EF5350; }
+  .footer { font-size: 11px; color: #888; margin-top: 8px; }
+  .footer a { color: #90CAF9; }
+</style>
+</head>
+<body>
+<h2>🌐 实时双语字幕</h2>
+
+<div class="row">
+  <label>启用</label>
+  <label class="toggle">
+    <input type="checkbox" id="switch" checked>
+    <span class="slider"></span>
+  </label>
+</div>
+
+<div class="row">
+  <label>目标语言</label>
+  <select id="target-lang">
+    <option value="zh-CN">中文 (简体)</option>
+    <option value="zh-TW">中文 (繁體)</option>
+    <option value="ja">日本語</option>
+    <option value="ko">한국어</option>
+    <option value="fr">Français</option>
+    <option value="de">Deutsch</option>
+    <option value="es">Español</option>
+    <option value="pt">Português</option>
+    <option value="ru">Русский</option>
+    <option value="ar">العربية</option>
+  </select>
+</div>
+
+<div class="row">
+  <label>翻译服务</label>
+  <select id="server-url">
+    <option value="http://127.0.0.1:8739">本地 (127.0.0.1:8739)</option>
+    <option value="" disabled>自定义 (coming)</option>
+  </select>
+</div>
+
+<div class="status">
+  <span class="dot" id="server-dot"></span>
+  <span id="server-status">检测中…</span>
+</div>
+
+<div class="footer">
+  <strong>快捷键</strong>: Alt+T 开关 | Alt+L 切换语言<br>
+  <a href="https://github.com/hanshaoyuyehanshaoyuye/everyones-video" target="_blank">GitHub</a> · MIT 开源
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
