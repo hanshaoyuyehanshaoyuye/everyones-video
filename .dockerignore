@@ -1,0 +1,26 @@
+# Exclude from Docker build context
+.git/
+.gitattributes
+.gitignore
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+*.mp3
+*.mp4
+*.wav
+*.m4a
+*.avi
+*.mkv
+*.flac
+*.ogg
+*.srt
+*.ass
+/subtitle_pipeline_work/
+/work/
+/tmp/
+*.log

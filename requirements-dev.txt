@@ -1,0 +1,2 @@
+# everyones-video development dependencies
+pytest>=8.0

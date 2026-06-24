@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:03,500
+Welcome to Everyones Video.
+
+2
+00:00:03,500 --> 00:00:07,200
+This is the fastest way to add subtitles to any video.
+
+3
+00:00:07,200 --> 00:00:12,800
+We support six ASR engines from completely free to enterprise-grade.
+
+4
+00:00:12,800 --> 00:00:17,500
+The secret is our subtitle-first strategy. Most YouTube videos already have captions.
+
+5
+00:00:17,500 --> 00:00:22,000
+We grab those first. Only if they're missing do we call an ASR engine.
+
+6
+00:00:22,000 --> 00:00:28,500
+For Chinese content, FunASR from Alibaba DAMO Academy is free and nearly as good as paid APIs.
+
+7
+00:00:28,500 --> 00:00:35,000
+Once you have your SRT file, translate it to any language with a single command.
+
+8
+00:00:35,000 --> 00:00:41,200
+Then burn the subtitles right into the video. One script does it all.
+
+9
+00:00:41,200 --> 00:00:46,000
+Let's get started. Clone the repo and run setup.sh.
+
+10
+00:00:46,000 --> 00:00:50,500
+Your first subtitled video is five minutes away.

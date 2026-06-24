@@ -1,0 +1,50 @@
+{
+  "name": "everyones-video",
+  "version": "5.0.0",
+  "description": "Complete video subtitle pipeline for Claude Code — transcribe, translate, TTS dub (Edge-TTS free), and burn subtitles into video. Free-first strategy: FunASR + faster-whisper (free, local) → StepFun/Doubao/Whisper (paid fallback). Standalone scripts work without Claude Code.",
+  "author": {
+    "name": "hanshaoyuyehanshaoyuye",
+    "url": "https://github.com/hanshaoyuyehanshaoyuye"
+  },
+  "homepage": "https://github.com/hanshaoyuyehanshaoyuye/everyones-video",
+  "repository": "https://github.com/hanshaoyuyehanshaoyuye/everyones-video",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "subtitle",
+    "srt",
+    "asr",
+    "transcription",
+    "translation",
+    "dubbing",
+    "tts",
+    "burn-subtitles",
+    "youtube",
+    "pipeline",
+    "batch",
+    "quality",
+    "multimedia"
+  ],
+  "skills": [
+    {
+      "name": "wjs-transcribing-audio",
+      "description": "Transcribe audio/video to SRT in the source language using Volcano (Doubao) or Whisper API",
+      "path": "skills/wjs-transcribing-audio"
+    },
+    {
+      "name": "wjs-translating-subtitles",
+      "description": "Translate SRT subtitles between languages with punctuation-bounded re-segmentation",
+      "path": "skills/wjs-translating-subtitles"
+    },
+    {
+      "name": "wjs-dubbing-video",
+      "description": "Generate TTS dubbing audio from SRT using Edge-TTS (free, neural, 100+ languages)",
+      "path": "skills/wjs-dubbing-video"
+    },
+    {
+      "name": "wjs-burning-subtitles",
+      "description": "Burn subtitles into video (hard-coded) or soft-mux as a togglable track using libass",
+      "path": "skills/wjs-burning-subtitles"
+    }
+  ]
+}

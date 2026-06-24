@@ -1,0 +1,36 @@
+{
+  "records": [
+    {
+      "time": "2026-06-23T22:11:16",
+      "engine": "deepseek_translate",
+      "lang": "en",
+      "duration_sec": 15.0,
+      "cost_yuan": 0.0003,
+      "source": "srt",
+      "cues": 18
+    },
+    {
+      "time": "2026-06-23T22:11:55",
+      "engine": "deepseek_translate",
+      "lang": "en",
+      "duration_sec": 15.0,
+      "cost_yuan": 0.0003,
+      "source": "srt",
+      "cues": 18
+    }
+  ],
+  "engines": {
+    "deepseek_translate": {
+      "calls": 0,
+      "total_sec": 0,
+      "total_cost": 0,
+      "total_cues": 0
+    },
+    "funasr": {
+      "calls": 0,
+      "total_sec": 0,
+      "total_cost": 0,
+      "total_cues": 0
+    }
+  }
+}

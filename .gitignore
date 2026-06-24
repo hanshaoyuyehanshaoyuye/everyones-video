@@ -1,0 +1,29 @@
+# Media outputs
+*.mp3
+*.mp4
+*.wav
+*.opus
+*.ogg
+
+# Generated SRT files (but keep examples)
+*.srt
+!examples/*.srt
+
+# Work directories
+.subtitle_pipeline_work/
+work/
+*.state
+
+# Transcription text
+transcript.txt
+audio.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

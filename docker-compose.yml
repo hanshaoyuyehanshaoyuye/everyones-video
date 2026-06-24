@@ -1,0 +1,26 @@
+services:
+  pipeline:
+    build: .
+    volumes:
+      - ./work/pipeline:/app/work
+      - ./examples:/app/examples:ro
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - STEPFUN_API_KEY=${STEPFUN_API_KEY:-}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:14b}
+      - PIPELINE_WORK_DIR=/app/work
+    entrypoint: bash integration/pipeline.sh
+
+  api:
+    build: .
+    ports:
+      - "${API_PORT:-127.0.0.1:8730}:8730"
+    volumes:
+      - ./work/api:/app/work
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY?Error: DEEPSEEK_API_KEY is required for API server}
+      - TRANSLATE_API_TOKEN=${TRANSLATE_API_TOKEN?Error: TRANSLATE_API_TOKEN is required — set a persistent token}
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
+    entrypoint: python3 integration/translate_srt.py --server --port 8730

@@ -1,0 +1,11 @@
+# everyones-video 完整依赖（含本地 ASR 引擎）
+# pip install -r requirements-full.txt
+#
+# ⚠ FunASR 首次运行自动下载 ~1GB 模型
+# ⚠ faster-whisper 首次运行自动下载 ~74MB (base) ~1.5GB (large)
+
+-r requirements.txt
+
+# 本地免费 ASR（按需选装，不装也能用 YouTube 字幕 + API）
+funasr>=1.2.0
+faster-whisper>=1.0.0

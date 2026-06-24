@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install test dependencies
+        run: pip install pytest
+      - name: Run pytest
+        run: python -m pytest tests/ -v --tb=short
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check Python syntax
+        run: |
+          find . -name "*.py" -not -path "./.git/*" -not -path "./.pytest_cache/*" \
+            -not -path "*/__pycache__/*" | while read f; do
+            python -m py_compile "$f" || exit 1
+          done
+      - name: ShellCheck pipeline.sh
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: "./integration"
+          check_together: "yes"
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t everyones-video .
