@@ -61,7 +61,7 @@ while [ $# -gt 0 ]; do
             echo "                      ASR 引擎 (默认: auto)"
             echo "  --translate          翻译为目标语言"
             echo "  --dub                TTS 配音 (Edge-TTS 免费)"
-            echo "  --diarize            说话人分离 (FunASR, 多人场景)"
+            echo "  --diarize            说话人分离 (FunASR cam++ / faster-whisper WhisperX)"
             echo "  --reflect            翻译反思修复 (GEMBA-MQM, 自动改进)"
             echo "  --burn               烧录字幕到视频"
             echo "  --step N             从第N步开始 (1-6)"
@@ -212,7 +212,12 @@ step2() {
         faster-whisper)
             echo "  → 引擎: faster-whisper (免费本地, CTranslate2)"
             if python3 -c "import faster_whisper" 2>/dev/null; then
-                python3 "$FWHISPER_SCRIPT" "$audio_file" --lang "$LANG" -o "$transcript_file"
+                if $DO_DIARIZE; then
+                    echo "  → 说话人分离: WhisperX + pyannote"
+                    python3 "$FWHISPER_SCRIPT" "$audio_file" --lang "$LANG" --diarize --srt -o "$srt_file"
+                else
+                    python3 "$FWHISPER_SCRIPT" "$audio_file" --lang "$LANG" -o "$transcript_file"
+                fi
             else
                 echo "  ⚠ faster-whisper 未安装。安装: pip install faster-whisper"
                 echo "  ⚠ 降级尝试 StepFun..."

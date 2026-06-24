@@ -9,3 +9,7 @@
 # 本地免费 ASR（按需选装，不装也能用 YouTube 字幕 + API）
 funasr>=1.2.0
 faster-whisper>=1.0.0
+
+# 说话人分离 (faster-whisper + WhisperX diarization)
+# 需要 HF_TOKEN + 接受 pyannote 模型条款: huggingface.co/pyannote
+whisperx>=3.1.1

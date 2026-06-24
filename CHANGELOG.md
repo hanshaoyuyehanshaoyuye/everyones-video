@@ -4,6 +4,17 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.1.0] — Unreleased
+
+### Added
+- **faster-whisper speaker diarization**: `faster_whisper_run.py --diarize` via WhisperX + pyannote.audio. English multi-speaker scenarios now have speaker-labeled SRT output.
+- `faster_whisper_run.py --hf-token`: HuggingFace token for pyannote model access.
+- `pipeline.sh --diarize` now works with `--engine faster-whisper` (was FunASR-only).
+
+### Changed
+- `requirements-full.txt`: added `whisperx>=3.1.1` for diarization.
+- `docs/ASR_COMPARISON.md`: updated comparison table with speaker diarization row.
+
 ## [5.0.0] — Unreleased
 
 ### Added

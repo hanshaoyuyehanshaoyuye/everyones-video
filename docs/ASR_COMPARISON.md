@@ -10,6 +10,7 @@
 | **速度** | 1 秒 (下载) | ~15× RTF | ~40-60× RTF | ~85-101× | ~15-25× | ~10-20× |
 | **时间戳** | ✅ SRT | ✅ word级 | ✅ word级 | ❌ 纯文本 | ✅ SRT | ✅ word级 |
 | **VAD** | — | ✅ | ✅ | ❌ | — | ❌ |
+| **说话人分离** | — | ✅ cam++ | ✅ WhisperX | — | — | — |
 | **标点恢复** | — | ✅ | ❌ | ❌ | — | ❌ |
 | **本地运行** | — | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **安装** | pip install yt-dlp | pip install -r requirements-full.txt | pip install -r requirements-full.txt | API key | API key | API key |
@@ -48,6 +49,7 @@ StepFun 在长音频场景表现突出：
 - 英文音频，需要**免费方案**
 - 比原版 whisper 快 4×
 - CPU 可跑（比 whisper.cpp 更好用的 Python API）
+- 说话人分离（`--diarize`）：需额外安装 WhisperX + HF_TOKEN
 - 安装：`pip install -r requirements-full.txt`（首次运行自动下载 ~74MB+ 模型）
 
 ### 选 StepFun
