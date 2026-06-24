@@ -25,6 +25,7 @@ import ssl
 from pathlib import Path
 
 from srt_utils import parse_srt, parse_srt_text
+from tm import TranslationMemory
 
 API_BASE = os.environ.get("TRANSLATE_API_BASE", "https://api.deepseek.com")
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
@@ -83,9 +84,32 @@ def call_llm(messages: list[dict], api_key: str, temperature: float = 0.3) -> st
 
 
 def translate_batch(cues: list[dict], target: str, source: str, api_key: str = "",
-                    use_ollama: bool = False) -> list[str]:
-    """Translate a batch of SRT cues preserving index mapping"""
-    texts = [f"[{c['index']}] {c['text']}" for c in cues]
+                    use_ollama: bool = False, tm: "TranslationMemory | None" = None,
+                    ) -> list[str]:
+    """Translate a batch of SRT cues, with TM caching for reuse and consistency."""
+
+    # Pre-filter: separate exact matches from new cues
+    exact_hits: dict[int, str] = {}  # cue_index → cached translation
+    new_cues: list[dict] = []
+    new_pairs: list[tuple[str, str]] = []  # (source_text, target_text) to store after
+
+    if tm is not None:
+        for c in cues:
+            hit = tm.lookup_exact(c["text"], source, target)
+            if hit is not None:
+                exact_hits[c["index"]] = hit
+            else:
+                new_cues.append(c)
+    else:
+        new_cues = list(cues)
+
+    # If all cues were cached, early return
+    cached_hit_count = len(exact_hits)
+    if not new_cues:
+        return [exact_hits.get(c["index"], c["text"]) for c in cues], cached_hit_count
+
+    # Build prompt for new cues only
+    texts = [f"[{c['index']}] {c['text']}" for c in new_cues]
     joined = "\n\n".join(texts)
 
     lang_names = {"zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
@@ -96,6 +120,16 @@ def translate_batch(cues: list[dict], target: str, source: str, api_key: str = "
     target_name = lang_names.get(target, target)
     source_name = lang_names.get(source, "the source language")
 
+    # Add TM fuzzy matches as few-shot examples
+    few_shot = ""
+    if tm is not None:
+        for c in new_cues:
+            fuzzy = tm.lookup_fuzzy(c["text"], source, target, threshold=0.80, max_results=2)
+            if fuzzy:
+                few_shot += f"REF: \"{fuzzy[0][0]}\" → \"{fuzzy[0][1]}\"\n"
+    if few_shot:
+        few_shot = f"\nReference translations (use same style/terminology):\n{few_shot}\n"
+
     prompt = f"""Translate the following SRT subtitle cues from {source_name} to {target_name}.
 
 RULES (follow strictly):
@@ -105,7 +139,7 @@ RULES (follow strictly):
 4. For English output: natural conversational English, ~40 chars per line max.
 5. Do NOT merge or split cues — each [N] marker must appear exactly once in order.
 6. Output ONLY the translated text with markers. No commentary.
-
+{few_shot}
 TRANSLATE:
 {joined}"""
 
@@ -119,14 +153,27 @@ TRANSLATE:
         result = call_llm(messages, api_key, temperature=0.3)
 
     # Parse back: extract [N] text pairs
-    translated = {}
+    translated: dict[int, str] = {}
     for line in result.split("\n"):
         m = re.match(r"\[(\d+)\]\s*(.+)", line.strip())
         if m:
             translated[int(m.group(1))] = m.group(2).strip()
 
-    # Map back in order
-    return [translated.get(c["index"], c["text"]) for c in cues]
+    # Store new pairs in TM
+    if tm is not None:
+        for c in new_cues:
+            tgt_text = translated.get(c["index"], c["text"])
+            if tgt_text != c["text"]:  # don't cache untranslated
+                new_pairs.append((c["text"], tgt_text))
+        if new_pairs:
+            tm.store_batch(new_pairs, source, target)
+
+    # Merge exact matches + new translations
+    merged = {}
+    merged.update(exact_hits)
+    merged.update(translated)
+    result = [merged.get(c["index"], c["text"]) for c in cues]
+    return result, cached_hit_count
 
 
 def re_segment(cues: list[dict], lang: str) -> list[dict]:
@@ -185,6 +232,10 @@ def main():
     parser.add_argument("--engine", default="auto",
                         choices=["auto", "deepseek", "ollama"],
                         help="翻译引擎: auto(自动) / deepseek / ollama (默认: auto)")
+    parser.add_argument("--tm-path", default=None,
+                        help="翻译记忆库路径 (默认: ~/.everyones-video/translation_memory.json)")
+    parser.add_argument("--no-tm", action="store_true",
+                        help="禁用翻译记忆库 (不使用缓存)")
     parser.add_argument("--server", action="store_true", help="启动 HTTP API 服务器")
     parser.add_argument("--port", type=int, default=8730, help="API 服务器端口 (默认 8730)")
 
@@ -233,15 +284,37 @@ def main():
     if not cues:
         sys.exit(f"No cues found in {args.input}")
 
+    # Init Translation Memory
+    tm = None
+    if not args.no_tm:
+        tm = TranslationMemory(args.tm_path)
+        tm_stats = tm.stats()
+        tm_size = sum(tm_stats.values())
+        if tm_size > 0:
+            print(f"→ TM: {tm_size} 条已有翻译 ({tm.path})")
+        else:
+            print(f"→ TM: 空 ({tm.path})")
+
     engine_name = "Ollama" if use_ollama else MODEL
     print(f"翻译 {len(cues)} 条字幕 → {args.to} (引擎: {engine_name})")
 
     # Batch translate
     translated = []
+    cached_count = 0
     for i in range(0, len(cues), args.batch_size):
         batch = cues[i:i + args.batch_size]
-        print(f"  批次 {i // args.batch_size + 1}/{(len(cues) - 1) // args.batch_size + 1}")
-        translated += translate_batch(batch, args.to, args.source, key, use_ollama=use_ollama)
+        batch_num = i // args.batch_size + 1
+        total_batches = (len(cues) - 1) // args.batch_size + 1
+        print(f"  批次 {batch_num}/{total_batches}", end="")
+        translated_batch, batch_cached = translate_batch(
+            batch, args.to, args.source, key, use_ollama=use_ollama, tm=tm,
+        )
+        translated += translated_batch
+        cached_count += batch_cached
+        print(f" → {len(translated_batch)} 条")
+
+    if cached_count > 0:
+        print(f"  TM 命中: {cached_count}/{len(cues)} 条 (省 {cached_count} 次 API 调用)")
 
     # Build output cues
     out_cues = []
@@ -414,11 +487,14 @@ def run_server(port: int):
 
             translated = []
             batch_size = body.get("batch_size", 30)
+            use_tm = body.get("tm", True)
+            server_tm = TranslationMemory(body.get("tm_path")) if use_tm else None
             for i in range(0, len(cues), batch_size):
                 batch = cues[i:i + batch_size]
-                translated += translate_batch(
-                    batch, target, source, API_KEY, use_ollama=use_ollama,
+                batch_result, _ = translate_batch(
+                    batch, target, source, API_KEY, use_ollama=use_ollama, tm=server_tm,
                 )
+                translated += batch_result
 
             out_cues = []
             for c, trans in zip(cues, translated):

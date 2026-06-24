@@ -4,6 +4,17 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.2.0] — Unreleased
+
+### Added
+- **Translation Memory (TM)**: `integration/tm.py` — JSON-based translation memory, zero extra dependencies.
+  - Exact match: reuses cached translations, saves API calls.
+  - Fuzzy match: difflib.SequenceMatcher ≥80% threshold, includes best matches as few-shot examples in LLM prompt.
+  - Auto-stores new translations after each batch.
+  - CLI: `python integration/tm.py stats|export|import|clear`.
+- `translate_srt.py --tm-path` / `--no-tm` flags: control TM behavior.
+- `translate_srt.py` batch flow: pre-filters exact TM hits before LLM call, reports cache hit count.
+
 ## [5.1.0] — Unreleased
 
 ### Added
