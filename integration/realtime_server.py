@@ -39,6 +39,15 @@ API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 API_BASE = os.environ.get("TRANSLATE_API_BASE", "https://api.deepseek.com")
 MODEL = os.environ.get("TRANSLATE_MODEL", "deepseek-chat")
 
+# ── 安全限制 ──
+MAX_BODY_BYTES = 100 * 1024       # 100 KB — reject larger POST bodies
+MAX_TEXT_CHARS = 500              # per text for single translate
+MAX_BATCH_ITEMS = 100             # max texts per batch
+MAX_BATCH_TEXT_CHARS = 200        # per text for batch
+RATE_WINDOW = 60                  # seconds
+RATE_MAX_REQUESTS = 100           # /translate 每分钟
+RATE_MAX_BATCH = 20               # /translate/batch 每分钟
+
 LANG_NAMES = {
     "zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
     "zh-TW": "Traditional Chinese", "en": "English",
@@ -160,9 +169,12 @@ RULES:
 
 
 class RealtimeHandler(BaseHTTPRequestHandler):
-    """极简 HTTP handler — 不做鉴权，仅 localhost。"""
+    """极简 HTTP handler — localhost only, rate-limited, body-size-limited."""
 
-    tm: TranslationMemory = None  # 类变量, 由 main() 注入
+    tm: TranslationMemory = None
+    _rate_map: dict[str, list[tuple[str, float]]] = {}  # ip -> [(endpoint, timestamp)]
+    _rate_lock = threading.Lock()
+    _req_counter = [0]
 
     def do_GET(self):
         if self.path == "/health":
@@ -175,6 +187,12 @@ class RealtimeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         content_len = int(self.headers.get("Content-Length", "0"))
+
+        # Body size limit — reject oversized requests
+        if content_len > MAX_BODY_BYTES:
+            self._json(413, {"error": f"body too large (max {MAX_BODY_BYTES // 1024} KB)"})
+            return
+
         raw = self.rfile.read(content_len)
         body = {}
         if content_len > 0:
@@ -184,7 +202,13 @@ class RealtimeHandler(BaseHTTPRequestHandler):
                 try:
                     body = json.loads(raw.decode("gbk"))
                 except (UnicodeDecodeError, json.JSONDecodeError):
-                    body = {}
+                    self._json(400, {"error": "invalid JSON"})
+                    return
+
+        # Rate limiting — per-endpoint throttling
+        if not self._check_rate():
+            self._json(429, {"error": "rate limited", "retry_after": RATE_WINDOW})
+            return
 
         if self.path == "/translate":
             self._handle_translate(body)
@@ -200,9 +224,17 @@ class RealtimeHandler(BaseHTTPRequestHandler):
         if not text:
             self._json(400, {"error": "empty text"})
             return
+        if len(text) > MAX_TEXT_CHARS:
+            self._json(400, {"error": f"text too long (max {MAX_TEXT_CHARS} chars)"})
+            return
 
         source = body.get("from", "en")
         target = body.get("to", "zh-CN")
+        # Validate language codes prevent prompt injection
+        if source not in LANG_NAMES:
+            source = "en"
+        if target not in LANG_NAMES:
+            target = "zh-CN"
         use_ollama = self._use_ollama()
 
         # 1. TM exact match
@@ -231,10 +263,24 @@ class RealtimeHandler(BaseHTTPRequestHandler):
         if not texts:
             self._json(400, {"error": "empty texts"})
             return
+        if not isinstance(texts, list):
+            self._json(400, {"error": "texts must be an array"})
+            return
+        if len(texts) > MAX_BATCH_ITEMS:
+            self._json(400, {"error": f"batch too large (max {MAX_BATCH_ITEMS} items)"})
+            return
 
         source = body.get("from", "en")
         target = body.get("to", "zh-CN")
+        if source not in LANG_NAMES:
+            source = "en"
+        if target not in LANG_NAMES:
+            target = "zh-CN"
         use_ollama = self._use_ollama()
+
+        # Truncate long texts and filter empty
+        texts = [t[:MAX_BATCH_TEXT_CHARS].strip() for t in texts if isinstance(t, str)]
+        texts = [t for t in texts if t]
 
         results = []
         misses = []
@@ -304,6 +350,31 @@ class RealtimeHandler(BaseHTTPRequestHandler):
         conf = win_count / max(total, 1)
         self._json(200, {"lang": best, "confidence": round(conf, 2)})
 
+    def _check_rate(self) -> bool:
+        """Per-endpoint rate limiting."""
+        ip = self.client_address[0]
+        now = time.time()
+        endpoint = self.path
+        with RealtimeHandler._rate_lock:
+            buckets = RealtimeHandler._rate_map.get(ip, [])
+            # Purge expired
+            buckets = [(ep, t) for ep, t in buckets if now - t < RATE_WINDOW]
+            ep_count = sum(1 for ep, t in buckets if ep == endpoint)
+            max_req = RATE_MAX_BATCH if endpoint == "/translate/batch" else RATE_MAX_REQUESTS
+            if ep_count >= max_req:
+                RealtimeHandler._rate_map[ip] = buckets
+                return False
+            buckets.append((endpoint, now))
+            RealtimeHandler._rate_map[ip] = buckets
+            # Periodic cleanup (~every 200 requests)
+            RealtimeHandler._req_counter[0] += 1
+            if RealtimeHandler._req_counter[0] % 200 == 0:
+                stale = [k for k, v in RealtimeHandler._rate_map.items()
+                         if not any(now - t < RATE_WINDOW for _, t in v)]
+                for k in stale:
+                    del RealtimeHandler._rate_map[k]
+            return True
+
     def _use_ollama(self) -> bool:
         if not API_KEY:
             return True  # fallback to Ollama
@@ -315,6 +386,9 @@ class RealtimeHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 

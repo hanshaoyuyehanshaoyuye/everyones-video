@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [6.2.0] — Unreleased
 
+### Security
+- **realtime_server.py 加固**: 体大小限制 (100KB→413)、费率限制 (/translate 100/min, /batch 20/min)、文本长度限制 (500/200chars)、语言码白名单、安全头。
+
 ### Added
 - **多语种实时翻译**: 日🇯🇵 韩🇰🇷 俄🇷🇺 德🇩🇪 法🇫🇷 西🇪🇸 葡🇧🇷 阿🇸🇦, 12 语种互通。
   - `popup.html/js`: 源语言选择 + "自动检测", 源/目标语言冲突提示。
