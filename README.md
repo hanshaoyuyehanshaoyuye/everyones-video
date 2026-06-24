@@ -1,34 +1,34 @@
-# Everyones Video — 视频字幕全管线 🎬
+# Everyones Video — 实时字幕 + 离线管线 🎬
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blue)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/tree/main/extension)
 [![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/blob/main/tests/test_core.py)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python)](https://python.org)
-[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://hub.docker.com)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://ghcr.io)
 
-> **省钱第一，速度第二，精度第三。**  /  Free first, fast second, precise third.
+> **两大模式：实时翻译 + 离线出片。免费优先，MIT 开源。** / Real-time translation + offline pipeline. Free first, MIT licensed.
 
-一句话加字幕，一条命令出片。Claude Code 里说"给视频加字幕"全自动搞定，也能 Docker 部署成 API 服务器、接入 CI/CD 批量处理。**一套代码，创作者到团队全场景覆盖。**
-
-One command from YouTube / local file to finished subtitled video. A Claude Code community skill AND a standalone CLI.
+**Chrome 扩展**：打开 YouTube 自动双语字幕，零下载零等待。**离线管线**：一句话从 URL/文件到成品视频，Claude Code 技能 + 独立 CLI 双模。
 
 ---
 
 ## 为什么选 everyones-video
 
-**免费优先、MIT 许可、Docker 就绪、安全加固 — 四张牌在赛道里同时具备的只有我们。**
+**免费优先、MIT 许可、Chrome 实时翻译、Docker 就绪、安全加固 — 五张牌同时具备的只有我们。**
 
 | 能力 | everyones-video | pyvideotrans | VideoLingo | Mazinger | jianshuo/skills |
 |------|:--:|:--:|:--:|:--:|:--:|
 | **许可** | **MIT** | GPL-3.0 | Apache 2.0 | 待确认 | MIT |
+| **Chrome 实时翻译** | **✅ v6.0** | — | — | — | — |
 | **整管线 ¥0 跑通** | **✅** | 需配 API | 需配 API | 需配 API | 需配 API |
 | **Docker + API Server** | **✅** | — | — | — | — |
+| **翻译记忆库 TM** | **✅** | — | — | — | — |
 | **安全加固** | **✅** | — | — | — | — |
 | **Claude Code 技能** | **✅ 4 个** | — | — | — | ✅ 15 个 |
-| 说话人分离 | ✅ FunASR | ✅ | ✅ | — | — |
+| 说话人分离 | ✅ FunASR + WhisperX | ✅ | ✅ | — | — |
 | 翻译质量反思 | ✅ GEMBA-MQM修复 | — | ✅ 3步 | — | — |
 | 翻译质量评估 | ✅ GEMBA-MQM | — | — | — | — |
-| 语音克隆 | — Edge-TTS | ✅ 3引擎 | — | — | — |
+| 语音合成 | ✅ Edge-TTS | ✅ 3引擎 | — | — | — |
 
 > **MIT 许可：** 嵌入产品、SaaS 服务、二次开发 — 都无需开源你的代码。
 >
@@ -38,7 +38,52 @@ One command from YouTube / local file to finished subtitled video. A Claude Code
 
 ---
 
-## 五分钟效果
+## Chrome 实时翻译 (v6.0)
+
+**打开 YouTube → 自动双语字幕。不下视频、不等处理、零 ASR 成本。**
+
+### 原理
+
+```
+YouTube 视频
+    │
+    ▼
+content.js 拦截 timedtext API ── 拿到原始字幕 XML
+    │
+    ▼
+POST /translate/batch → realtime_server.py (127.0.0.1:8739)
+    │
+    ├─ TM 命中 → <1ms 直接返回
+    └─ TM 未命中 → DeepSeek/Ollama → 写入 TM
+    │
+    ▼
+rAF 轮询 video.currentTime → 匹配 cue → DOM 叠加中文
+```
+
+### 30 秒安装
+
+```bash
+# 1. 启动翻译后端
+export DEEPSEEK_API_KEY=sk-...
+python3 integration/realtime_server.py &
+
+# 2. 加载扩展
+# Chrome → 扩展程序 → 开发者模式 → "加载已解压的扩展程序" → 选 extension/ 目录
+
+# 3. 打开任意 YouTube 视频，开启字幕
+```
+
+### 特性
+
+- **零下载**：拦截 YouTube 自带 timedtext，不调用 yt-dlp
+- **零延迟感**：TM 缓存命中 <1ms，LLM 翻译 ~300ms
+- **同视频复看免费**：翻译缓存到 TM，二次观看 100% 命中，不调 API
+- **11 语种**：中文、日本語、한국어、Français、Deutsch、Español 等
+- **Alt+T 开关**，**Alt+L 切语言**
+
+---
+
+## 五分钟效果 (离线管线)
 
 **Before:** 一个没字幕的英文教程视频，需要 30 分钟手动操作、花几十元调 API。
 
@@ -81,6 +126,20 @@ bash integration/pipeline.sh "https://youtube.com/watch?v=dQw4w9WgXcQ" --transla
 ---
 
 ## 流程图
+
+### 实时模式 (Chrome Extension)
+
+```mermaid
+flowchart LR
+    A[YouTube 页面] --> B[content.js<br/>拦截 timedtext]
+    B --> C[realtime_server.py<br/>TM + LLM 翻译]
+    C --> D[DOM 叠加<br/>双语字幕]
+    D --> E{换语言?}
+    E -->|Alt+L| C
+    E -->|无操作| F[✅ 持续实时翻译]
+```
+
+### 离线管线 (pipeline.sh)
 
 ```mermaid
 flowchart TD
@@ -139,14 +198,14 @@ cd everyones-video && pip install -r requirements.txt
 
 ## 引擎对比
 
-| 引擎 | 价格 | 中文 | 英文 | 速度 | 时间戳 | 离线 |
-|------|:--:|:--:|:--:|:--:|:--:|:--:|
-| **FunASR** 阿里达摩院 | 🟢 免费 | ⭐⭐⭐ | ⭐ | ~15× | ✅ | ✅ |
-| **faster-whisper** CTranslate2 | 🟢 免费 | ⭐⭐ | ⭐⭐⭐ | ~50× | ✅ | ✅ |
-| yt-dlp 字幕提取 | 🟢 免费 | — | — | 1s | ✅ | ❌ |
-| StepFun | ~0.4元/h | ⭐⭐ | ⭐⭐ | ~90× | ❌ | ❌ |
-| 豆包 Volcano | 付费 | ⭐⭐⭐ | — | ~20× | ✅ | ❌ |
-| Whisper API | $0.006/min | ⭐⭐ | ⭐⭐⭐ | ~15× | ✅ | ❌ |
+| 引擎 | 价格 | 中文 | 英文 | 速度 | 时间戳 | 说话人 | 离线 |
+|------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **FunASR** 阿里达摩院 | 🟢 免费 | ⭐⭐⭐ | ⭐ | ~15× | ✅ | ✅ cam++ | ✅ |
+| **faster-whisper** CTranslate2 | 🟢 免费 | ⭐⭐ | ⭐⭐⭐ | ~50× | ✅ | ✅ WhisperX | ✅ |
+| yt-dlp 字幕提取 | 🟢 免费 | — | — | 1s | ✅ | — | ❌ |
+| StepFun | ~0.4元/h | ⭐⭐ | ⭐⭐ | ~90× | ❌ | — | ❌ |
+| 豆包 Volcano | 付费 | ⭐⭐⭐ | — | ~20× | ✅ | — | ❌ |
+| Whisper API | $0.006/min | ⭐⭐ | ⭐⭐⭐ | ~15× | ✅ | — | ❌ |
 
 > 详 [docs/ASR_COMPARISON.md](docs/ASR_COMPARISON.md)
 
@@ -196,6 +255,11 @@ python3 integration/text_to_srt.py transcript.txt --lang zh -o output.srt
 
 # SRT → TTS 配音
 python3 integration/tts_dub.py subtitles.srt --lang zh-CN -o dub.mp3
+
+# 翻译记忆库（TM）
+python3 integration/tm.py stats                             # 查看统计
+python3 integration/tm.py export --lang-pair en-zh-CN       # 导出
+python3 integration/tm.py import --file tm_backup.json      # 导入
 
 # 烧字幕 + 配音到视频
 python3 skills/wjs-burning-subtitles/scripts/render.py \
@@ -259,13 +323,13 @@ python3 integration/eval_quality.py source.srt translated.srt --from en --to zh-
 
 | # | 场景 | 成本 | 引擎 |
 |---|------|------|------|
-| 1 | YouTube 英文教程 → 中英双语 | ¥0 | yt-dlp 字幕 |
-| 2 | 中文会议录音 → 文字纪要 | ¥0 | FunASR |
-| 3 | 中文短视频 → 英文版出片 | ¥0~0.01 | FunASR |
-| 4 | 批量 100 个视频 → 字幕 | ~¥15 | 豆包 |
-| 5 | 播客 MP3 → 文字稿 + 时间轴 | ¥0 | FunASR |
-| 6 | 直播切片 → 快速出片 | ¥0~0.01 | FunASR |
-| 7 | 1 视频 → 5 语言字幕 | ~¥0.03 | DeepSeek |
+| 1 | **YouTube 实时双语字幕** | **¥0** | **Chrome Extension** |
+| 2 | YouTube 英文教程 → 中英双语出片 | ¥0 | yt-dlp 字幕 |
+| 3 | 中文会议录音 → 文字纪要 | ¥0 | FunASR |
+| 4 | 中文短视频 → 英文版出片 | ¥0~0.01 | FunASR |
+| 5 | 批量 100 个视频 → 字幕 | ~¥15 | 豆包 |
+| 6 | 播客 MP3 → 文字稿 + 时间轴 | ¥0 | FunASR |
+| 7 | 1 视频 → 5 语言字幕 | ~¥0.03 | DeepSeek + TM |
 | 8 | 纯本地离线（零网络） | ¥0 | FunASR |
 | 9 | 30 秒语音 → 入门测试 | ¥0 | FunASR |
 | 10 | 目录批量处理 | ~¥0 | batch_pipeline.sh |
@@ -298,14 +362,17 @@ docker compose up api
 | 文件 | 说明 |
 |------|------|
 | [integration/pipeline.sh](integration/pipeline.sh) | 一键管线脚本 (--engine 路由) |
-| [integration/funasr_run.py](integration/funasr_run.py) | 免费中文 ASR（FunASR 阿里达摩院） |
-| [integration/faster_whisper_run.py](integration/faster_whisper_run.py) | 免费英文 ASR（faster-whisper CTranslate2） |
+| [extension/](extension/) | Chrome 实时翻译扩展 (v6.0) |
+| [integration/realtime_server.py](integration/realtime_server.py) | 实时翻译后端 (TM + LLM, HTTP API) |
+| [integration/funasr_run.py](integration/funasr_run.py) | 免费中文 ASR (FunASR + cam++ 说话人) |
+| [integration/faster_whisper_run.py](integration/faster_whisper_run.py) | 免费英文 ASR (faster-whisper + WhisperX 说话人) |
 | [integration/text_to_srt.py](integration/text_to_srt.py) | 通用文本 → SRT |
-| [integration/translate_srt.py](integration/translate_srt.py) | SRT 翻译 + API 服务器 |
+| [integration/translate_srt.py](integration/translate_srt.py) | SRT 翻译 + TM 缓存 + API 服务器 |
+| [integration/tm.py](integration/tm.py) | 翻译记忆库 (exact + fuzzy, 零依赖) |
+| [integration/reflect_fix.py](integration/reflect_fix.py) | 翻译反思修复 (GEMBA-MQM → LLM → 再评) |
 | [integration/tts_dub.py](integration/tts_dub.py) | SRT → TTS 配音 (Edge-TTS) |
-| [integration/eval.py](integration/eval.py) | 引擎评估与推荐 |
 | [integration/eval_quality.py](integration/eval_quality.py) | GEMBA-MQM 翻译质量评分 |
-| [integration/batch_pipeline.sh](integration/batch_pipeline.sh) | 批量处理（并行+日志） |
+| [integration/batch_pipeline.sh](integration/batch_pipeline.sh) | 批量处理（并行+日志） | |
 | [skills/](skills/) | 四个 Claude Code 技能 |
 | [Dockerfile](Dockerfile) | Docker 镜像（多阶段） |
 | [docs/](docs/) | 架构 / 引擎对比 / 省钱指南 / 工作流 |
@@ -328,10 +395,11 @@ docker compose up api
 | 工具 | 来源 | 用途 |
 |------|------|------|
 | `yt-dlp` | pip | YouTube 下载 + 字幕提取 |
-| `FunASR` | 阿里达摩院 (Apache 2.0) | 中文免费 ASR |
+| `FunASR` | 阿里达摩院 (Apache 2.0) | 中文免费 ASR + cam++ 说话人分离 |
 | `faster-whisper` | SYSTRAN (MIT) | 英文免费 ASR |
+| `WhisperX` | MIT | faster-whisper 说话人分离 (pyannote) |
 | `ffmpeg` | 系统安装 | 音频转换 + 字幕烧录 |
-| `libass` | ffmpeg 内置 | 硬字幕渲染 |
+| `edge-tts` | MIT | TTS 配音 (Chrome Extension 不需要) |
 
 ---
 
