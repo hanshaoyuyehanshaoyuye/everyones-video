@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - CLI: `python integration/tm.py stats|export|import|clear`.
 - `translate_srt.py --tm-path` / `--no-tm` flags: control TM behavior.
 - `translate_srt.py` batch flow: pre-filters exact TM hits before LLM call, reports cache hit count.
+- **Docker ghcr.io push**: CI auto-builds + pushes to `ghcr.io/hanshaoyuyehanshaoyuye/everyones-video` on main push.
+
+### Changed
+- `Dockerfile`: added edge-tts, WhisperX opt-in build arg, TM volume, HF_TOKEN env.
+- `docker-compose.yml`: added TM volume mount, HF_TOKEN passthrough.
 
 ## [5.1.0] — Unreleased
 
