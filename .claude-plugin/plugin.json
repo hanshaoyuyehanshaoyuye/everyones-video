@@ -1,7 +1,7 @@
 {
   "name": "everyones-video",
-  "version": "5.0.0",
-  "description": "Complete video subtitle pipeline for Claude Code — transcribe, translate, TTS dub (Edge-TTS free), and burn subtitles into video. Free-first strategy: FunASR + faster-whisper (free, local) → StepFun/Doubao/Whisper (paid fallback). Standalone scripts work without Claude Code.",
+  "version": "6.2.0",
+  "description": "Real-time bilingual subtitles (Chrome Extension) + offline video pipeline. Multi-platform (YouTube/Bilibili/WebVTT), 12-language auto-detect, TM caching. Offline: ASR, translate, Edge-TTS dub, burn. Free-first, MIT.",
   "author": {
     "name": "hanshaoyuyehanshaoyuye",
     "url": "https://github.com/hanshaoyuyehanshaoyuye"
@@ -20,10 +20,16 @@
     "tts",
     "burn-subtitles",
     "youtube",
+    "bilibili",
+    "chrome-extension",
+    "real-time",
+    "speaker-diarization",
+    "translation-memory",
     "pipeline",
     "batch",
     "quality",
-    "multimedia"
+    "multimedia",
+    "nlp"
   ],
   "skills": [
     {
