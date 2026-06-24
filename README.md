@@ -19,7 +19,7 @@
 | 能力 | everyones-video | pyvideotrans | VideoLingo | Mazinger | jianshuo/skills |
 |------|:--:|:--:|:--:|:--:|:--:|
 | **许可** | **MIT** | GPL-3.0 | Apache 2.0 | 待确认 | MIT |
-| **Chrome 实时翻译** | **✅ v6.0** | — | — | — | — |
+| **Chrome 实时翻译** | **✅ v6.2** | — | — | — | — |
 | **整管线 ¥0 跑通** | **✅** | 需配 API | 需配 API | 需配 API | 需配 API |
 | **Docker + API Server** | **✅** | — | — | — | — |
 | **翻译记忆库 TM** | **✅** | — | — | — | — |
@@ -38,7 +38,7 @@
 
 ---
 
-## Chrome 实时翻译 (v6.1)
+## Chrome 实时翻译 (v6.2)
 
 **任意网页视频 → 自动双语字幕。不下视频、不等处理、零 ASR 成本。**
 
@@ -146,8 +146,8 @@ bash integration/pipeline.sh "https://youtube.com/watch?v=dQw4w9WgXcQ" --transla
 
 ```mermaid
 flowchart LR
-    A[YouTube 页面] --> B[content.js<br/>拦截 timedtext]
-    B --> C[realtime_server.py<br/>TM + LLM 翻译]
+    A[任意视频网站] --> B[content.js<br/>多平台字幕劫持]
+    B --> C[realtime_server.py<br/>TM + LLM 翻译 · 12语种]
     C --> D[DOM 叠加<br/>双语字幕]
     D --> E{换语言?}
     E -->|Alt+L| C
@@ -306,18 +306,29 @@ export TRANSLATE_MODEL=qwen3:14b
 
 ### 5. 启动 API 服务器
 
+**离线翻译服务 (端口 8730)：**
+
 ```bash
 export DEEPSEEK_API_KEY=sk-...
 export TRANSLATE_API_TOKEN=my-secret-token
 python3 integration/translate_srt.py --server --port 8730
 ```
 
+**实时翻译服务 (端口 8739，供 Chrome 扩展调用)：**
+
 ```bash
-# 调用 API
-curl -H "Authorization: Bearer my-secret-token" \
-     -H "Content-Type: application/json" \
-     -d '{"srt":"1\n00:00:00,000 --> 00:00:05,000\nHello world\n","to":"zh-CN"}' \
-     http://127.0.0.1:8730/translate
+export DEEPSEEK_API_KEY=sk-...
+python3 integration/realtime_server.py --port 8739
+```
+
+```bash
+# 检测源语言
+curl -X POST http://127.0.0.1:8739/detect-lang \
+     -d '{"texts":["こんにちは世界"]}'
+
+# 单条翻译
+curl -X POST http://127.0.0.1:8739/translate \
+     -d '{"text":"Hello","from":"en","to":"zh-CN"}'
 ```
 
 ### 6. 批量处理
@@ -356,13 +367,16 @@ python3 integration/eval_quality.py source.srt translated.srt --from en --to zh-
 ## Docker
 
 ```bash
-# 本地构建（推荐 — 因为 Docker 镜像尚未推送）
+# 本地构建
 docker build -t everyones-video .
 docker run --rm \
     -v $(pwd)/work:/app/work \
     -e DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY \
     everyones-video \
     "https://youtube.com/watch?v=VIDEO_ID"
+
+# 或 pull 官方镜像
+# docker pull ghcr.io/hanshaoyuyehanshaoyuye/everyones-video:latest
 
 # API 服务器
 export DEEPSEEK_API_KEY=sk-...
@@ -377,7 +391,7 @@ docker compose up api
 | 文件 | 说明 |
 |------|------|
 | [integration/pipeline.sh](integration/pipeline.sh) | 一键管线脚本 (--engine 路由) |
-| [extension/](extension/) | Chrome 实时翻译扩展 (v6.0) |
+| [extension/](extension/) | Chrome 实时翻译扩展 (v6.2, 多平台+12语种) |
 | [integration/realtime_server.py](integration/realtime_server.py) | 实时翻译后端 (TM + LLM, HTTP API) |
 | [integration/funasr_run.py](integration/funasr_run.py) | 免费中文 ASR (FunASR + cam++ 说话人) |
 | [integration/faster_whisper_run.py](integration/faster_whisper_run.py) | 免费英文 ASR (faster-whisper + WhisperX 说话人) |
@@ -387,7 +401,7 @@ docker compose up api
 | [integration/reflect_fix.py](integration/reflect_fix.py) | 翻译反思修复 (GEMBA-MQM → LLM → 再评) |
 | [integration/tts_dub.py](integration/tts_dub.py) | SRT → TTS 配音 (Edge-TTS) |
 | [integration/eval_quality.py](integration/eval_quality.py) | GEMBA-MQM 翻译质量评分 |
-| [integration/batch_pipeline.sh](integration/batch_pipeline.sh) | 批量处理（并行+日志） | |
+| [integration/batch_pipeline.sh](integration/batch_pipeline.sh) | 批量处理（并行+日志） |
 | [skills/](skills/) | 四个 Claude Code 技能 |
 | [Dockerfile](Dockerfile) | Docker 镜像（多阶段） |
 | [docs/](docs/) | 架构 / 引擎对比 / 省钱指南 / 工作流 |

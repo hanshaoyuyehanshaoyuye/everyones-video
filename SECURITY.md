@@ -12,8 +12,10 @@ You should receive a response within 48 hours. If the issue is confirmed, we wil
 
 | Version | Supported |
 |---------|-----------|
+| 6.x     | ✅ |
+| 5.x     | ✅ |
 | 4.x     | ✅ |
-| 3.x     | ✅ |
+| 3.x     | ❌ |
 | 2.x     | ❌ |
 | 1.x     | ❌ |
 
@@ -22,9 +24,10 @@ You should receive a response within 48 hours. If the issue is confirmed, we wil
 This project follows a defense-in-depth approach:
 
 - **Supply chain**: SHA256 verification for downloaded binaries (render.py)
-- **API server**: Token auth, rate limiting, CORS restriction, body size limits
+- **API server**: Token auth, rate limiting (100/min translate, 20/min batch), body size limit (100KB), input validation (language code whitelist, text length caps), CORS restriction, security headers (nosniff, DENY, no-store)
+- **Extension**: Manifest V3 CSP, `textContent` only (no innerHTML), only communicates with localhost
 - **Container**: Non-root user, .dockerignore, minimal base image
-- **Secrets**: API keys read from environment variables only, never logged
+- **Secrets**: API keys read from environment variables only, never logged, never committed
 
 ## Dependencies
 
