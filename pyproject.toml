@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "everyones-video"
+version = "7.0.0"
+description = "Real-time bilingual subtitles (Chrome Extension) + offline video subtitle pipeline"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "hanshaoyuyehanshaoyuye" }]
+keywords = ["video", "subtitle", "srt", "asr", "translation", "dubbing", "youtube", "bilibili"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Text Processing :: Linguistic",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "yt-dlp>=2026.1.1",
+    "edge-tts>=6.0.0",
+    "rapidfuzz>=3.0.0",
+]
+
+[project.optional-dependencies]
+full = ["funasr>=1.0", "faster-whisper>=1.0", "whisperx>=3.1"]
+dev = ["pytest>=8.0", "pytest-cov>=6.0", "mypy>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/hanshaoyuyehanshaoyuye/everyones-video"
+Repository = "https://github.com/hanshaoyuyehanshaoyuye/everyones-video"
+Issues = "https://github.com/hanshaoyuyehanshaoyuye/everyones-video/issues"
+
+[project.scripts]
+ev-translate = "integration.translate_srt:main"
+ev-realtime = "integration.realtime_server:main"
+ev-tm = "integration.tm:main"
+ev-sqi = "integration.subtitle_quality:main"
+ev-quality = "integration.eval_quality:main"
+ev-tts = "integration.tts_dub:main"
+
+[tool.setuptools.packages.find]
+include = ["integration*", "skills*", "extension*"]

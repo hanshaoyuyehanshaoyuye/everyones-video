@@ -33,12 +33,32 @@
   let lastVideoId = null;
   let detectedLang = null;
 
+  // ── 早期退出: 页面无 <video> 则跳过所有拦截（减少非视频页面的开销）──
+  function hasVideo() {
+    return !!document.querySelector('video');
+  }
+
+  function waitForVideo(timeoutMs, cb) {
+    if (hasVideo()) { cb(); return; }
+    const deadline = Date.now() + timeoutMs;
+    const mo = new MutationObserver(() => {
+      if (hasVideo()) { mo.disconnect(); cb(); return; }
+      if (Date.now() > deadline) { mo.disconnect(); /* no video found, skip */ return; }
+    });
+    mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => { mo.disconnect(); }, timeoutMs);
+  }
+
   // ── 初始化 ──
   loadSettings(() => {
     if (!enabled) return;
     checkServer(() => {
-      injectOverlay();
-      start();
+      // Wait up to 8s for a <video> element before attaching
+      waitForVideo(8000, () => {
+        if (!hasVideo()) return;  // page has no video — skip all overhead
+        injectOverlay();
+        start();
+      });
     });
   });
 
