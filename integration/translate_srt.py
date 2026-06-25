@@ -23,68 +23,12 @@ import os
 import re
 import sys
 import time
-import urllib.request
-import urllib.error
-import ssl
 from pathlib import Path
 
+from common import (ts_to_sec, sec_to_ts, format_srt, call_llm, call_ollama,
+                     LANG_NAMES, API_KEY, MODEL, API_BASE)
 from srt_utils import parse_srt, parse_srt_text
 from tm import TranslationMemory
-
-API_BASE = os.environ.get("TRANSLATE_API_BASE", "https://api.deepseek.com")
-API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-MODEL = os.environ.get("TRANSLATE_MODEL", "deepseek-chat")
-
-
-def format_srt(cues: list[dict]) -> str:
-    out = []
-    for i, c in enumerate(cues, 1):
-        out.append(str(i))
-        out.append(f"{c['start']} --> {c['end']}")
-        out.append(c["text"])
-        out.append("")
-    return "\n".join(out)
-
-
-def call_llm(messages: list[dict], api_key: str, temperature: float = 0.3) -> str:
-    data = json.dumps({
-        "model": MODEL,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": 4096,
-        "stream": False,
-    }).encode()
-    req = urllib.request.Request(
-        f"{API_BASE}/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
-    last_err = None
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=120, context=ssl.create_default_context()) as r:
-                return json.loads(r.read())["choices"][0]["message"]["content"]
-        except urllib.error.HTTPError as e:
-            last_err = e
-            if e.code in (429, 500, 502, 503):
-                wait = 2 ** attempt
-                print(f"  HTTP {e.code}, retry in {wait}s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            raise
-        except (urllib.error.URLError, OSError) as e:
-            last_err = e
-            if attempt < 2:
-                wait = 2 ** attempt
-                print(f"  Network error, retry in {wait}s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            raise
-    raise last_err
 
 
 def translate_batch(cues: list[dict], target: str, source: str, api_key: str = "",
@@ -116,13 +60,8 @@ def translate_batch(cues: list[dict], target: str, source: str, api_key: str = "
     texts = [f"[{c['index']}] {c['text']}" for c in new_cues]
     joined = "\n\n".join(texts)
 
-    lang_names = {"zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
-                  "en": "English", "ja": "Japanese", "ko": "Korean",
-                  "fr": "French", "de": "German", "es": "Spanish",
-                  "pt": "Portuguese", "ru": "Russian", "ar": "Arabic"}
-
-    target_name = lang_names.get(target, target)
-    source_name = lang_names.get(source, "the source language")
+    target_name = LANG_NAMES.get(target, target)
+    source_name = LANG_NAMES.get(source, "the source language")
 
     # Add TM fuzzy matches as few-shot examples
     few_shot = ""
@@ -209,18 +148,6 @@ def re_segment(cues: list[dict], lang: str) -> list[dict]:
                     })
                     cursor = end
     return out
-
-
-def ts_to_sec(ts: str) -> float:
-    h, m, s = ts.replace(",", ".").split(":")
-    return int(h) * 3600 + int(m) * 60 + float(s)
-
-
-def sec_to_ts(sec: float) -> str:
-    h = int(sec // 3600)
-    m = int((sec % 3600) // 60)
-    s = sec % 60
-    return f"{h:02d}:{m:02d}:{s:06.3f}".replace(".", ",")
 
 
 def main():
@@ -560,20 +487,4 @@ def run_server(port: int):
         server.shutdown()
 
 
-def call_ollama(messages: list[dict], temperature: float = 0.3) -> str:
-    """Local translation fallback via Ollama."""
-    data = json.dumps({
-        "model": os.environ.get("OLLAMA_MODEL", "qwen3:14b"),
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": temperature},
-    }).encode()
-    req = urllib.request.Request(
-        f"{os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')}/api/chat",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return json.loads(r.read())["message"]["content"]
 

@@ -40,10 +40,14 @@ document.getElementById('target-lang').addEventListener('change', (e) => {
   }
 });
 
-// Server URL
+// Server URL (restrict to localhost only)
 document.getElementById('server-url').addEventListener('change', (e) => {
-  const v = e.target.value;
+  const v = e.target.value.trim();
   if (!v) return;
+  if (!/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(v)) {
+    document.getElementById('server-status').textContent = '仅允许 http://127.0.0.1 或 http://localhost';
+    return;
+  }
   chrome.storage.local.set({ serverUrl: v });
   checkServerStatus(v);
 });

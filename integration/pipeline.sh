@@ -333,6 +333,29 @@ step4_reflect() {
     echo "  → $translated_srt"
 }
 
+# ── Step 4c: SQI 字幕质量修复 (v7.0) ──
+SQI_SCRIPT="$HERE/subtitle_quality.py"
+
+step4c_sqi() {
+    echo "═══ Step 4c: SQI 字幕质量检查 ═══"
+
+    local srt_to_check="${translated_srt:-$srt_file}"
+    local sqi_lang="${TARGET_LANG:-zh-CN}"
+
+    if [ ! -f "$SQI_SCRIPT" ]; then
+        echo "  ⚠ subtitle_quality.py 未找到，跳过"
+        return
+    fi
+    if [ ! -f "$srt_to_check" ]; then
+        echo "  ⚠ 无可检查的 SRT 文件"
+        return
+    fi
+
+    echo "  → 检查重叠/时长/CPS..."
+    python3 "$SQI_SCRIPT" "$srt_to_check" --lang "$sqi_lang" --fix
+    echo "  → $srt_to_check (已修复)"
+}
+
 # ── Step 5: TTS 配音 (可选) ──
 dub_audio="$WORK_DIR/dub.mp3"
 
@@ -470,6 +493,10 @@ fi
 
 if [ "$DO_REFLECT" = true ] && [ "$DO_TRANSLATE" = true ]; then
     step4_reflect; save_state 6
+fi
+
+if [ "$DO_TRANSLATE" = true ]; then
+    step4c_sqi; save_state 6
 fi
 
 if [ "$DO_DUB" = true ]; then

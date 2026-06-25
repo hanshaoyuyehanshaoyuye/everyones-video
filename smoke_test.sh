@@ -58,7 +58,7 @@ done
 echo ""
 echo "── 单元测试 ──"
 if python3 -m pytest "$PROJECT_DIR/tests/" -q 2>/dev/null || rtk proxy python3 -m pytest "$PROJECT_DIR/tests/" -q 2>/dev/null; then
-    pass "pytest (25 tests)"
+    pass "pytest (33 tests)"
 else
     fail "pytest" "测试失败"
 fi

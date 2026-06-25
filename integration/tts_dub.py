@@ -26,6 +26,7 @@ import tempfile
 from pathlib import Path
 
 from srt_utils import parse_srt
+from common import ts_to_sec
 
 # Edge-TTS 语音映射: 语言 → 推荐语音
 VOICE_MAP = {
@@ -43,11 +44,6 @@ VOICE_MAP = {
 }
 
 DEFAULT_VOICE = "en-US-AriaNeural"
-
-
-def ts_to_sec(ts: str) -> float:
-    h, m, s = ts.replace(",", ".").split(":")
-    return int(h) * 3600 + int(m) * 60 + float(s)
 
 
 async def edge_tts_gen(text: str, voice: str, out_path: str):

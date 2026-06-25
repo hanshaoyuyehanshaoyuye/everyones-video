@@ -12,6 +12,7 @@ You should receive a response within 48 hours. If the issue is confirmed, we wil
 
 | Version | Supported |
 |---------|-----------|
+| 7.x     | ✅ |
 | 6.x     | ✅ |
 | 5.x     | ✅ |
 | 4.x     | ✅ |

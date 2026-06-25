@@ -23,6 +23,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common import ts_to_sec, sec_to_ts, format_srt
+from srt_utils import parse_srt
+
 # ── 质量阈值 ──────────────────────────────────────────
 
 MAX_CUE_DURATION = 7.0   # 单条字幕最长显示秒数（≥此值截断到上一字幕结束+此值）
@@ -64,21 +67,6 @@ class QualityReport:
         if self.cps_warnings: lines.append(f"{self.cps_warnings} 条 CPS 超标（不阻断）")
         if self.multi_line_warnings: lines.append(f"{self.multi_line_warnings} 条多行/过长")
         return "；".join(lines) if lines else "✅ 字幕质量检查通过"
-
-
-# ── 时间戳工具 ────────────────────────────────────────
-
-def ts_to_sec(ts: str) -> float:
-    h, m, s = ts.replace(",", ".").split(":")
-    return int(h) * 3600 + int(m) * 60 + float(s)
-
-
-def sec_to_ts(sec: float) -> str:
-    sec = max(sec, 0.0)
-    h = int(sec // 3600)
-    m = int((sec % 3600) // 60)
-    s = sec % 60
-    return f"{h:02d}:{m:02d}:{s:06.3f}".replace(".", ",")
 
 
 # ── 可读性检测 ───────────────────────────────────────
@@ -234,40 +222,6 @@ def diagnose(cues: list[dict], lang: str = "zh") -> list[str]:
     """只诊断不修改，返回问题列表"""
     _, report = enforce(cues, lang)
     return report.issues
-
-
-# ── SRT 读写 ───────────────────────────────────────────
-
-def parse_srt(path: str) -> list[dict]:
-    """Parse SRT file → [{index, start, end, text}]"""
-    raw = Path(path).read_text(encoding="utf-8")
-    blocks = re.split(r"\n\n+", raw.strip())
-    cues = []
-    for block in blocks:
-        lines = block.strip().split("\n")
-        if len(lines) < 3:
-            continue
-        ts_match = re.match(r"(\S+)\s*-->\s*(\S+)", lines[1])
-        if not ts_match:
-            continue
-        cues.append({
-            "index": int(lines[0]) if lines[0].isdigit() else len(cues) + 1,
-            "start": ts_match.group(1),
-            "end": ts_match.group(2),
-            "text": "\n".join(lines[2:]),
-        })
-    return cues
-
-
-def format_srt(cues: list[dict]) -> str:
-    """Format cues → SRT string"""
-    parts = []
-    for c in cues:
-        parts.append(str(c["index"]))
-        parts.append(f"{c['start']} --> {c['end']}")
-        parts.append(c["text"])
-        parts.append("")
-    return "\n".join(parts)
 
 
 # ── CLI ────────────────────────────────────────────────

@@ -24,47 +24,15 @@ import os
 import re
 import sys
 import time
-import urllib.request
-import urllib.error
-import ssl
 from pathlib import Path
 
 from srt_utils import parse_srt, parse_srt_text
-
-API_BASE = os.environ.get("TRANSLATE_API_BASE", "https://api.deepseek.com")
-API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-MODEL = os.environ.get("TRANSLATE_MODEL", "deepseek-chat")
-
-LANGS = {
-    "zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
-    "en": "English", "ja": "Japanese", "ko": "Korean",
-    "fr": "French", "de": "German", "es": "Spanish",
-}
+from common import (LANG_NAMES, API_KEY, API_BASE, MODEL, call_llm as _base_call_llm)
 
 
 def call_llm(messages: list[dict], api_key: str) -> str:
-    data = json.dumps({
-        "model": MODEL, "messages": messages,
-        "temperature": 0.0, "max_tokens": 2048, "stream": False,
-    }).encode()
-    req = urllib.request.Request(
-        f"{API_BASE}/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=60, context=ssl.create_default_context()) as r:
-                return json.loads(r.read())["choices"][0]["message"]["content"]
-        except (urllib.error.HTTPError, urllib.error.URLError, OSError):
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            raise
+    """质量评估 LLM 调用（零温度、60s 超时）"""
+    return _base_call_llm(messages, api_key=api_key, temperature=0.0, max_tokens=2048, timeout=60)
 
 
 def gemba_mqm(source_cues: list[dict], trans_cues: list[dict],
@@ -81,8 +49,8 @@ def gemba_mqm(source_cues: list[dict], trans_cues: list[dict],
 
     pairs = "\n\n".join(lines[:50])  # batch max 50 cues
 
-    src_name = LANGS.get(src_lang, src_lang)
-    tgt_name = LANGS.get(tgt_lang, tgt_lang)
+    src_name = LANG_NAMES.get(src_lang, src_lang)
+    tgt_name = LANG_NAMES.get(tgt_lang, tgt_lang)
 
     prompt = f"""Evaluate the following subtitle translations from {src_name} to {tgt_name}.
 
@@ -192,6 +160,9 @@ def run_server(port: int):
             self.send_header("Access-Control-Allow-Origin", f"http://127.0.0.1:{port}")
             self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
 
         def check_rate(self) -> bool:
@@ -232,6 +203,9 @@ def run_server(port: int):
             self.send_response(code)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", f"http://127.0.0.1:{port}")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 

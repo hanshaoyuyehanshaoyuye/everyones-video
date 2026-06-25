@@ -21,23 +21,17 @@ import json
 import os
 import re
 import signal
-import ssl
 import sys
 import threading
 import time
-import urllib.request
-import urllib.error
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 # 确保可以 import 同目录模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tm import TranslationMemory
-
-# ── LLM 配置 ──
-API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-API_BASE = os.environ.get("TRANSLATE_API_BASE", "https://api.deepseek.com")
-MODEL = os.environ.get("TRANSLATE_MODEL", "deepseek-chat")
+from common import (LANG_NAMES, API_KEY, API_BASE, MODEL, call_llm as _base_call_llm,
+                     call_ollama as _base_call_ollama)
 
 # ── 安全限制 ──
 MAX_BODY_BYTES = 100 * 1024       # 100 KB — reject larger POST bodies
@@ -48,63 +42,15 @@ RATE_WINDOW = 60                  # seconds
 RATE_MAX_REQUESTS = 100           # /translate 每分钟
 RATE_MAX_BATCH = 20               # /translate/batch 每分钟
 
-LANG_NAMES = {
-    "zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
-    "zh-TW": "Traditional Chinese", "en": "English",
-    "ja": "Japanese", "ko": "Korean", "fr": "French",
-    "de": "German", "es": "Spanish", "pt": "Portuguese",
-    "ru": "Russian", "ar": "Arabic",
-}
-
 
 def call_llm(messages: list[dict], temperature: float = 0.3) -> str:
-    data = json.dumps({
-        "model": MODEL,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": 256,
-        "stream": False,
-    }).encode()
-    req = urllib.request.Request(
-        f"{API_BASE}/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {API_KEY}",
-        },
-        method="POST",
-    )
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=30, context=ssl.create_default_context()) as r:
-                return json.loads(r.read())["choices"][0]["message"]["content"]
-        except urllib.error.HTTPError as e:
-            if e.code in (429, 500, 502, 503):
-                time.sleep(2 ** attempt)
-                continue
-            raise
-        except (urllib.error.URLError, OSError) as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            raise
+    """实时翻译 LLM 调用（低 token 限制、短超时）"""
+    return _base_call_llm(messages, temperature=temperature, max_tokens=256, timeout=30)
 
 
 def call_ollama(messages: list[dict], temperature: float = 0.3) -> str:
-    data = json.dumps({
-        "model": os.environ.get("OLLAMA_MODEL", "qwen3:14b"),
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": temperature},
-    }).encode()
-    req = urllib.request.Request(
-        f"{os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')}/api/chat",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return json.loads(r.read())["message"]["content"]
+    """实时翻译 Ollama 调用"""
+    return _base_call_ollama(messages, temperature=temperature, timeout=180)
 
 
 def translate_single(text: str, source: str, target: str, use_ollama: bool) -> str:
@@ -380,10 +326,15 @@ class RealtimeHandler(BaseHTTPRequestHandler):
             return True  # fallback to Ollama
         return False
 
+    @property
+    def _cors_origin(self) -> str:
+        port = self.server.server_address[1]
+        return f"http://127.0.0.1:{port}, http://localhost:{port}"
+
     def _json(self, code, data):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -394,7 +345,7 @@ class RealtimeHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
