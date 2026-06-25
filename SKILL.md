@@ -1,16 +1,16 @@
 ---
 name: everyones-video
 description: >-
-  End-to-end video subtitle pipeline — Chrome Extension real-time bilingual subtitles (multi-platform, 12 languages) + offline pipeline (transcribe, translate, TTS dub, burn). Free-first strategy: FunASR (Chinese) / faster-whisper (English) → paid API fallback. Translation Memory caching, Docker support, REST API server, 10 workflow scenarios. Use when
+  End-to-end video subtitle pipeline — Chrome Extension real-time bilingual subtitles (multi-platform, 12 languages: zh/en/ja/ko/ru/de/fr/es/pt/ar) + offline pipeline (transcribe, translate, TTS dub, burn). SQI subtitle quality engine, SQLite TM with rapidfuzz, Docker, 6 CLI entry points, 64 tests. Use when
   adding subtitles to video, translating SRT files, dubbing with TTS, burning captions into MP4,
   setting up a subtitle pipeline, or localizing video content. Triggers on: 给视频加字幕, 做字幕,
   SRT翻译, 字幕翻译, 配音, 烧字幕, 硬字幕, 视频字幕管线, subtitle pipeline, add subtitles to
   video, transcribe audio to SRT, TTS dub, burn captions, video localization, 字幕, 语音转文字, SRT.
 ---
 
-# Everyones Video
+# Everyones Video v7.0
 
-一站式视频字幕管线。从音频/YouTube → SRT → 翻译 → 烧录成品。
+一站式视频字幕管线。12 语种实时翻译 + 离线管线。从音频/YouTube → SRT → 翻译 → SQI 质量修复 → 烧录成品。
 
 ## 快速使用（Claude Code 中）
 

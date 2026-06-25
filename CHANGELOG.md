@@ -7,18 +7,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [7.0.0] — 2026-06-25
 
 ### Added
-- **SQI 字幕质量引擎** (`integration/subtitle_quality.py`): 五大质量保障。
-  - **重叠检测修复**: 自动检测并修复字幕时间重叠。
-  - **最大时长截断**: 单条字幕超过 7 秒自动截断，防止长沉默期间字幕滞留。
-  - **最小时长强制**: 字幕少于 0.8 秒拉长，防止闪屏。
-  - **间距桥接合并**: 间距 < 0.15s 的相邻字幕自动合并。
-  - **CPS 可读性检查**: 字符/秒超标警告（中文 8 CPS / 英文 20 CPS）。
-- `translate_srt.py --no-sqi` 跳过质量检查。
-- SQI 独立 CLI: `python3 integration/subtitle_quality.py input.srt --fix`
+- **SQI 字幕质量引擎** (`integration/subtitle_quality.py`): 五大质量保障（重叠修复/时长截断/CPS检查/间距桥接）
+- **TM SQLite+FTS5 后端**: JSON→SQLite，WAL 并发安全，FTS5 全文索引，百万级不退化
+- **rapidfuzz**: fuzzy match 快 10-50× difflib，自动回退
+- **common.py**: 消除 5 处重复代码（ts_to_sec/format_srt/call_llm/LANG_NAMES 等）
+- **realtime_server.py 集成测试**: 17 tests（健康/限流/CORS/语言检测/输入验证）
+- **TM 单元测试**: 8 tests（exact/fuzzy/batch/stats/persist/atomic）
+- **pipeline E2E 测试**: 6 tests
+- **CI**: mypy 类型检查 + pytest-cov 覆盖率 + PyPI trusted publishing
+- **.pre-commit-config.yaml**: ruff + shellcheck + trailing-whitespace
+- `translate_srt.py --no-sqi`、`--no-resegment`
+- **PyPI 打包**: `pyproject.toml`，6 个 CLI 入口（ev-translate/ev-realtime/ev-tm/ev-sqi/ev-quality/ev-tts）
 
 ### Changed
-- `translate_srt.py`: 翻译后自动跑 SQI 质量引擎（默认启用）。
+- `translate_srt.py`: 翻译后自动跑 SQI 质量引擎（默认启用）
+- `pipeline.sh`: SQI 集成（`$HERE`→`$PROJECT_DIR`，save_state 去重）
+- `realtime_server.py`: CORS `*`→`127.0.0.1:{port}`，安全头补齐
+- `eval_quality.py`: 安全头补齐（nosniff/DENY/no-store）
+- `content.js`: subtitleMap→cueArray 排序数组 + O(log n) 二分查找 + 暂停感知
+- `content.js`: AbortSignal.timeout() polyfill + 无 video 页面早期退出
+- `manifest.json`: CSP + version_name + minimum_chrome_version
+- `render.py`: ffmpeg filter graph 注入防护（路径转义 + 白名单校验）
+- `popup.js`: serverUrl 仅允许 localhost/127.0.0.1
+- `tm.py`: sys 导入提升到模块级 + stale .tmp 清理
+- 3 处裸 `except Exception`→`(OSError, ValueError)`
+- LANG_NAMES 添加 th（泰语）
+- README: 中文说明 + 12 语种章节 + 58 test badge
+- SECURITY.md: 添加 7.x 支持版本
+- 文档: ARCHITECTURE.md 重写为 6 ADR + SKILL.md 更新
 - `plugin.json` / `manifest.json`: 版本 6.2.0 → 7.0.0
+- 测试: 25 → 64 passed
 
 ## [6.2.0] — 2026-06-25
 
