@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "integration"))
 
 from translate_srt import parse_srt, format_srt, ts_to_sec, sec_to_ts, re_segment
 from text_to_srt import split_sentences, format_timestamp, estimate_duration, text_to_srt
+from subtitle_quality import enforce as sqi_enforce, diagnose, parse_srt as sqi_parse, format_srt as sqi_format
 from eval import load, record, recommend, stats as eval_stats
 import eval as eval_module
 
@@ -193,3 +194,124 @@ def parse_srt_text(text: str) -> list[dict]:
         return parse_srt(tmp)
     finally:
         os.unlink(tmp)
+
+
+# ── SQI 字幕质量引擎测试 ─────────────────────────────
+
+SRT_OVERLAPPING = """1
+00:00:00,000 --> 00:00:03,000
+Hello world
+
+2
+00:00:02,500 --> 00:00:05,000
+This overlaps with #1
+"""
+
+SRT_LONG_GAP = """1
+00:00:00,000 --> 00:00:02,000
+First cue
+
+2
+00:00:15,000 --> 00:00:17,000
+After long silence
+"""
+
+SRT_SHORT_GAP = """1
+00:00:00,000 --> 00:00:02,000
+Hello
+
+2
+00:00:02,100 --> 00:00:04,000
+World
+"""
+
+SRT_SUPER_LONG = """1
+00:00:00,000 --> 00:00:30,000
+This is a very long subtitle that stays on screen for 30 seconds
+
+2
+00:00:31,000 --> 00:00:33,000
+Next one
+"""
+
+SRT_TOO_SHORT = """1
+00:00:00,000 --> 00:00:00,300
+Hi
+
+2
+00:00:01,000 --> 00:00:03,000
+Next
+"""
+
+
+class TestSQI:
+
+    def test_overlap_fix(self):
+        cues = parse_srt_text(SRT_OVERLAPPING)
+        assert len(cues) == 2
+        fixed, report = sqi_enforce(cues, "en")
+        assert report.fixed_overlaps >= 1
+        # After fix: cue 2 start >= cue 1 end
+        assert ts_to_sec(fixed[1]["start"]) >= ts_to_sec(fixed[0]["end"])
+
+    def test_long_gap_freeze(self):
+        cues = parse_srt_text(SRT_LONG_GAP)
+        fixed, report = sqi_enforce(cues, "en")
+        # Cue 1 duration should be capped at MAX_CUE_DURATION
+        dur = ts_to_sec(fixed[0]["end"]) - ts_to_sec(fixed[0]["start"])
+        assert dur <= 7.5  # MAX_CUE_DURATION = 7.0 + small tolerance
+
+    def test_max_duration_cap(self):
+        cues = parse_srt_text(SRT_SUPER_LONG)
+        fixed, report = sqi_enforce(cues, "en")
+        dur0 = ts_to_sec(fixed[0]["end"]) - ts_to_sec(fixed[0]["start"])
+        assert dur0 <= 7.5
+        assert report.capped_durations >= 1
+
+    def test_min_duration_enforce(self):
+        cues = parse_srt_text(SRT_TOO_SHORT)
+        fixed, report = sqi_enforce(cues, "zh")
+        dur0 = ts_to_sec(fixed[0]["end"]) - ts_to_sec(fixed[0]["start"])
+        assert dur0 >= 0.5  # boosted from 0.3 to ≥0.5
+
+    def test_diagnose_returns_issues(self):
+        issues = diagnose(parse_srt_text(SRT_OVERLAPPING), "en")
+        assert len(issues) >= 1
+        assert any("重叠" in i or "overlap" in i.lower() for i in issues)
+
+    def test_cps_warning_triggers(self):
+        srt = """1
+00:00:00,000 --> 00:00:01,000
+这是一个非常长的中文字幕句子包含了很多很多的文字需要在一秒内读完
+
+2
+00:00:01,500 --> 00:00:03,000
+Short
+"""
+        cues = parse_srt_text(srt)
+        _, report = sqi_enforce(cues, "zh")
+        assert report.cps_warnings >= 1
+
+    def test_preserves_cue_count_without_merge(self):
+        srt = """1
+00:00:00,000 --> 00:00:02,000
+First
+
+2
+00:00:03,000 --> 00:00:05,000
+Second
+
+3
+00:00:06,000 --> 00:00:08,000
+Third
+"""
+        cues = parse_srt_text(srt)
+        fixed, _ = sqi_enforce(cues, "en")
+        assert len(fixed) == 3
+
+    def test_idempotent(self):
+        cues = parse_srt_text(SRT_OVERLAPPING)
+        f1, _ = sqi_enforce(cues, "en")
+        f2, _ = sqi_enforce(f1, "en")
+        assert ts_to_sec(f2[0]["end"]) >= ts_to_sec(f1[0]["end"]) - 0.01
+        assert ts_to_sec(f2[1]["start"]) >= ts_to_sec(f2[0]["end"]) - 0.01

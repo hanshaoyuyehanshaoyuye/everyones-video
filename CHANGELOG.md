@@ -4,6 +4,22 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [7.0.0] — 2026-06-25
+
+### Added
+- **SQI 字幕质量引擎** (`integration/subtitle_quality.py`): 五大质量保障。
+  - **重叠检测修复**: 自动检测并修复字幕时间重叠。
+  - **最大时长截断**: 单条字幕超过 7 秒自动截断，防止长沉默期间字幕滞留。
+  - **最小时长强制**: 字幕少于 0.8 秒拉长，防止闪屏。
+  - **间距桥接合并**: 间距 < 0.15s 的相邻字幕自动合并。
+  - **CPS 可读性检查**: 字符/秒超标警告（中文 8 CPS / 英文 20 CPS）。
+- `translate_srt.py --no-sqi` 跳过质量检查。
+- SQI 独立 CLI: `python3 integration/subtitle_quality.py input.srt --fix`
+
+### Changed
+- `translate_srt.py`: 翻译后自动跑 SQI 质量引擎（默认启用）。
+- `plugin.json` / `manifest.json`: 版本 6.2.0 → 7.0.0
+
 ## [6.2.0] — 2026-06-25
 
 ### Security

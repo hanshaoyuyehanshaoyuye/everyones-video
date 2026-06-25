@@ -9,6 +9,10 @@ translate_srt.py — 独立 SRT 翻译脚本（不依赖 Claude Code / 命令）
   python3 translate_srt.py input.srt --to zh-CN --from en         # 指定源语言
   python3 translate_srt.py input.srt --to ja --api-key sk-xxx     # 其他语言
 
+翻译后自动跑 SQI 字幕质量引擎：
+  - 重叠检测修复 / 最大时长截断 / 最小时长拉长 / 间距桥接 / CPS 可读性检查
+  跳过: --no-sqi
+
 支持 DeepSeek / OpenAI / 任何兼容 API。
 优先读 DEEPSEEK_API_KEY 环境变量，其次 --api-key 参数。
 """
@@ -228,6 +232,7 @@ def main():
     parser.add_argument("--api-key", help="API key (默认读 DEEPSEEK_API_KEY 环境变量)")
     parser.add_argument("--output", "-o", help="输出文件路径")
     parser.add_argument("--no-resegment", action="store_true", help="跳过标点重新分段")
+    parser.add_argument("--no-sqi", action="store_true", help="跳过 SQI 字幕质量检查")
     parser.add_argument("--batch-size", type=int, default=30, help="每批翻译条数 (默认30)")
     parser.add_argument("--engine", default="auto",
                         choices=["auto", "deepseek", "ollama"],
@@ -330,6 +335,13 @@ def main():
     # Skip when bilingual — re-segmentation would misalign source/target text.
     if not args.no_resegment and not args.bilingual:
         out_cues = re_segment(out_cues, args.to)
+
+    # SQI: 字幕质量引擎（v7.0）
+    if not args.no_sqi:
+        from subtitle_quality import enforce as sqi_enforce
+        out_cues, sqi_report = sqi_enforce(out_cues, args.to)
+        if not sqi_report.healthy() or sqi_report.summary() != "✅ 字幕质量检查通过":
+            print(f"  [SQI] {sqi_report.summary()}", file=sys.stderr)
 
     srt_output = format_srt(out_cues)
 

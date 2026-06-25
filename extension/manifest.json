@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Everyones Video — 实时双语字幕",
-  "version": "6.2.0",
+  "version": "7.0.0",
   "description": "YouTube 实时翻译字幕。劫持自带字幕→TM缓存→LLM翻译→双语叠加。完全免费，MIT开源。",
   "permissions": ["storage"],
   "host_permissions": [

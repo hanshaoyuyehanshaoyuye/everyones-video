@@ -1,7 +1,7 @@
 {
   "name": "everyones-video",
-  "version": "6.2.0",
-  "description": "Real-time bilingual subtitles (Chrome Extension) + offline video pipeline. Multi-platform (YouTube/Bilibili/WebVTT), 12-language auto-detect, TM caching. Offline: ASR, translate, Edge-TTS dub, burn. Free-first, MIT.",
+  "version": "7.0.0",
+  "description": "Real-time bilingual subtitles (Chrome Extension) + offline video pipeline. SQI subtitle quality engine (overlap fix, duration cap, CPS check). Multi-platform (YouTube/Bilibili/WebVTT), 12-language auto-detect, TM caching. Free-first, MIT.",
   "author": {
     "name": "hanshaoyuyehanshaoyuye",
     "url": "https://github.com/hanshaoyuyehanshaoyuye"
@@ -28,6 +28,8 @@
     "pipeline",
     "batch",
     "quality",
+    "subtitle-quality",
+    "sqi",
     "multimedia",
     "nlp"
   ],
