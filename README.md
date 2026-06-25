@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/tree/main/extension)
-[![Tests](https://img.shields.io/badge/tests-33%20passed-brightgreen)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/blob/main/tests/test_core.py)
+[![Tests](https://img.shields.io/badge/tests-58%20passed-brightgreen)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/blob/main/tests/test_core.py)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://ghcr.io)
 
