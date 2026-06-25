@@ -35,6 +35,7 @@ LANG_NAMES: dict[str, str] = {
     "pt": "Portuguese",
     "ru": "Russian",
     "ar": "Arabic",
+    "th": "Thai",
 }
 
 # ── LLM 配置（读环境变量）───────────────────────────
