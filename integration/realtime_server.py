@@ -372,7 +372,7 @@ def main():
             urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
             use_ollama = True
             print(f"→ 翻译后端: Ollama (本地 qwen3:14b)")
-        except Exception:
+        except (OSError, ValueError):
             print(f"⚠ DEEPSEEK_API_KEY 未设置, 且 Ollama 未运行")
             print(f"  设置: export DEEPSEEK_API_KEY=sk-...")
             print(f"  或启动: ollama serve && ollama pull qwen3:14b")

@@ -19,18 +19,23 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
-        run: pip install pytest
-      - name: Run pytest
-        run: python -m pytest tests/ -v --tb=short
+        run: pip install pytest pytest-cov
+      - name: Run pytest with coverage
+        run: python -m pytest tests/ -v --tb=short --cov=integration --cov-report=term-missing --cov-fail-under=40
 
   lint:
-    name: Lint
+    name: Lint & type check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install lint deps
+        run: pip install mypy
+      - name: Type check (mypy)
+        run: mypy integration/ --ignore-missing-imports --check-untyped-defs
+        continue-on-error: true
       - name: Check Python syntax
         run: |
           find . -name "*.py" -not -path "./.git/*" -not -path "./.pytest_cache/*" \

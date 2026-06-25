@@ -200,7 +200,7 @@ def main():
                 _ur.urlopen(ollama_host + "/api/tags", timeout=3)
                 print("→ DeepSeek key not set, using Ollama local translation...", file=sys.stderr)
                 use_ollama = True
-            except Exception:
+            except (OSError, ValueError):
                 sys.exit(
                     "Error: No translation backend available.\n"
                     "  Set DEEPSEEK_API_KEY for cloud translation, or\n"
@@ -421,7 +421,7 @@ def run_server(port: int):
                     import urllib.request as _ur
                     _ur.urlopen(ollama_host + "/api/tags", timeout=2)
                     use_ollama = True
-                except Exception:
+                except (OSError, ValueError):
                     use_ollama = False
 
             translated = []

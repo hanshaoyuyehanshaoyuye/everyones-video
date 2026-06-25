@@ -21,16 +21,17 @@
 
   // ── 状态 ──
   let video = null;
-  let subtitleMap = {};    // {startMs: {text, endMs, translation, cached}}
+  let cueArray = [];        // [{startMs, endMs, text, translation, cached, _fetching}] (sorted by startMs)
   let activeCue = null;
   let overlayEl = null;
   let pollTimer = null;
+  let rafId = null;
   let lang = { from: 'auto', to: 'zh-CN' };
   let enabled = true;
   let serverOk = false;
   let pendingUrl = null;
   let lastVideoId = null;
-  let detectedLang = null;  // auto-detected source language
+  let detectedLang = null;
 
   // ── 初始化 ──
   loadSettings(() => {
@@ -53,8 +54,8 @@
   }
   chrome.storage.onChanged.addListener(changes => {
     if (changes.enabled) { enabled = changes.enabled.newValue; if (!enabled) stop(); else start(); }
-    if (changes.sourceLang) { lang.from = changes.sourceLang.newValue; detectedLang = null; subtitleMap = {}; }
-    if (changes.targetLang) { lang.to = changes.targetLang.newValue; subtitleMap = {}; }
+    if (changes.sourceLang) { lang.from = changes.sourceLang.newValue; detectedLang = null; cueArray = []; }
+    if (changes.targetLang) { lang.to = changes.targetLang.newValue; cueArray = []; }
   });
 
   // ── 源语言自动检测 (Unicode 范围) ──
@@ -126,28 +127,57 @@
   }
   setInterval(() => { if (!document.getElementById(OVERLAY_ID)) injectOverlay(); }, 3000);
 
-  // ── 主循环 ──
-  function start() { if (pollTimer) return; findVideo(); attachCaptionSource(); observeVideoChange(); pollTimer = setInterval(tick, POLL_MS); }
-  function stop() { clearInterval(pollTimer); pollTimer = null; if (overlayEl) overlayEl.className = 'ev-overlay-cue empty'; subtitleMap = {}; activeCue = null; }
+  // ── 主循环（视频暂停时自动停止轮询）──
+  function start() {
+    if (pollTimer) return;
+    findVideo(); attachCaptionSource(); observeVideoChange();
+    pollTimer = setInterval(tick, POLL_MS);
+  }
+  function stop() {
+    clearInterval(pollTimer); pollTimer = null;
+    cancelAnimationFrame(rafId); rafId = null;
+    if (overlayEl) overlayEl.className = 'ev-overlay-cue empty';
+    cueArray = []; activeCue = null;
+  }
 
   function findVideo() {
     const v = document.querySelector('video');
     if (v && v !== video) {
+      if (video) { video.removeEventListener('play', onPlay); video.removeEventListener('pause', onPause); }
       video = v;
+      video.addEventListener('play', onPlay);
+      video.addEventListener('pause', onPause);
       const vid = location.href;
-      if (vid !== lastVideoId) { lastVideoId = vid; subtitleMap = {}; }
+      if (vid !== lastVideoId) { lastVideoId = vid; cueArray = []; }
     }
     if (!video) setTimeout(findVideo, 1000);
   }
 
-  // ── 每帧 tick ──
+  function onPlay() {
+    if (enabled && !pollTimer) pollTimer = setInterval(tick, POLL_MS);
+  }
+  function onPause() {
+    clearInterval(pollTimer); pollTimer = null;
+  }
+
+  // ── 二分查找当前 cue（O(log n)，替代 O(n) 遍历）──
+  function bsearchCue(tMs) {
+    let lo = 0, hi = cueArray.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1;
+      const c = cueArray[mid];
+      if (tMs >= c.startMs && tMs < c.endMs) return c;
+      if (tMs < c.startMs) hi = mid - 1;
+      else lo = mid + 1;
+    }
+    return null;
+  }
+
   function tick() {
     if (!enabled || !video || video.paused || video.readyState < 2) { hideOverlay(); return; }
+    if (!cueArray.length) return;
     const t = video.currentTime * 1000;
-    let match = null;
-    for (const [startMs, cue] of Object.entries(subtitleMap)) {
-      if (t >= parseInt(startMs) && t < cue.endMs) { match = cue; break; }
-    }
+    const match = bsearchCue(t);
     if (!match) { hideOverlay(); return; }
     if (activeCue && activeCue.startMs === match.startMs) return;
     activeCue = match;
@@ -164,7 +194,7 @@
       translateOne(cue.text, trans => {
         cue.translation = trans; cue._fetching = false; cue.cached = false;
         if (activeCue === cue && overlayEl) { overlayEl.className = 'ev-overlay-cue'; overlayEl.textContent = trans; }
-      }, Object.values(subtitleMap));
+      }, cueArray);
     }
   }
 
@@ -190,7 +220,7 @@
       signal: AbortSignal.timeout(15000),
     }).then(r => r.json()).then(data => {
       for (const r of (data.results || [])) {
-        for (const [, cue] of Object.entries(subtitleMap)) {
+        for (const cue of cueArray) {
           if (cue.text === r.original && r.translation) { cue.translation = r.translation; cue.cached = !!r.cached; break; }
         }
       }
@@ -198,13 +228,13 @@
     }).catch(() => done());
   }
 
-  // ── 通用 cue → subtitleMap ──
+  // ── 通用 cue → 排序数组 ──
   function ingestCues(cues) {
-    const m = {};
+    cues.sort((a, b) => a.startMs - b.startMs);
     for (const c of cues) {
-      m[c.startMs] = { text: c.text, endMs: c.endMs, translation: null, cached: false, startMs: c.startMs };
+      c.translation = null; c.cached = false; c._fetching = false;
     }
-    subtitleMap = m;
+    cueArray = cues;
     preTranslateBatch(cues, () => {});
   }
 
@@ -540,7 +570,7 @@
     new MutationObserver(() => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        subtitleMap = {}; activeCue = null; pendingUrl = null; lastVideoId = location.href;
+        cueArray = []; activeCue = null; pendingUrl = null; lastVideoId = location.href;
         findVideo();
         setTimeout(() => attachCaptionSource(), 1000);
       }
