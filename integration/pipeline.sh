@@ -335,7 +335,7 @@ step4_reflect() {
 }
 
 # ── Step 4c: SQI 字幕质量修复 (v7.0) ──
-SQI_SCRIPT="$HERE/subtitle_quality.py"
+SQI_SCRIPT="$PROJECT_DIR/integration/subtitle_quality.py"
 
 step4c_sqi() {
     echo "═══ Step 4c: SQI 字幕质量检查 ═══"
@@ -493,11 +493,11 @@ if [ "$DO_TRANSLATE" = true ]; then
 fi
 
 if [ "$DO_REFLECT" = true ] && [ "$DO_TRANSLATE" = true ]; then
-    step4_reflect; save_state 6
+    step4_reflect; save_state 5.5
 fi
 
 if [ "$DO_TRANSLATE" = true ]; then
-    step4c_sqi; save_state 6
+    step4c_sqi; save_state 5.6
 fi
 
 if [ "$DO_DUB" = true ]; then

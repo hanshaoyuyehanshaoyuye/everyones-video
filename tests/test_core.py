@@ -380,11 +380,14 @@ class TestTM:
         assert tm.lookup_fuzzy("anything", "en", "zh") == []
 
     def test_atomic_write_no_corruption(self, tmp_path):
-        p = str(tmp_path / "tm.json")
+        p = str(tmp_path / "tm.db")
         tm = TranslationMemory(p)
         tm.store("key", "value", "en", "zh")
         tm.flush()
-        # Verify no .tmp residue after successful write
-        assert not Path(p + ".tmp").exists()
-        # Content is valid JSON
-        assert json.loads(Path(p).read_text(encoding="utf-8"))
+        # File exists and is valid SQLite
+        assert Path(p).exists()
+        import sqlite3
+        conn = sqlite3.connect(p)
+        row = conn.execute("SELECT target_text FROM tm WHERE source_text=?", ("key",)).fetchone()
+        assert row[0] == "value"
+        conn.close()

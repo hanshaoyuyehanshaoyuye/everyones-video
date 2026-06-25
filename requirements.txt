@@ -5,6 +5,7 @@
 # 核心：YouTube 字幕 + 翻译 + 配音 + 烧录
 yt-dlp>=2026.1.1
 edge-tts>=6.0.0
+rapidfuzz>=3.0.0
 
 # 系统工具（非 pip 安装）：
 #   ffmpeg（--burn 烧录字幕用）

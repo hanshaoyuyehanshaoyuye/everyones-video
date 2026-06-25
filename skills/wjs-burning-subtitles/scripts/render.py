@@ -47,7 +47,7 @@ Encoding flags:
   --copy-video         Skip subtitle burn-in even if --srt is given
                        (useful for dub-only output that retains scaling)
 """
-import argparse, hashlib, os, shutil, subprocess, sys, time, urllib.request, zipfile
+import argparse, hashlib, os, re, shutil, subprocess, sys, time, urllib.request, zipfile
 from pathlib import Path
 
 EVERMEET_URL = "https://evermeet.cx/ffmpeg/getrelease/zip"
@@ -137,6 +137,14 @@ def pick_ffmpeg(need_libass: bool) -> str:
 
 
 def build_force_style(a) -> str:
+    # Validate all values: only allow alphanumeric, hex colors (&H...), spaces, basic punctuation
+    _allowed = re.compile(r'^[A-Za-z0-9&H# ,.\-_/]+$')
+    font = a.font
+    color = a.color
+    ocolor = a.outline_color
+    for name, val in [("font", font), ("color", color), ("outline", ocolor)]:
+        if not _allowed.match(val):
+            sys.exit(f"render.py: --{name} contains invalid characters: {val!r}")
     border = 1 if a.style == "outline" else 3
     parts = [
         f"Fontname={a.font}",
@@ -192,7 +200,9 @@ def main():
     filters = []
     if burn:
         style = build_force_style(a)
-        filters.append(f"[0:v]subtitles={a.srt}:force_style='{style}'[v]")
+        # Escape path for ffmpeg filter graph (: → \:, \ → \\)
+        safe_srt = a.srt.replace("\\", "\\\\").replace(":", "\\:")
+        filters.append(f"[0:v]subtitles={safe_srt}:force_style='{style}'[v]")
         vmap = "[v]"
     else:
         vmap = "0:v"
