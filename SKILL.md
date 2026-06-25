@@ -1,10 +1,7 @@
 ---
 name: everyones-video
 description: >-
-  End-to-end video subtitle pipeline — transcribe audio to SRT, translate subtitles between
-  any languages, TTS dubbing via Edge-TTS (free), and burn subtitles into video (hard-coded or
-  soft-mux). Free-first strategy: FunASR (Chinese) / faster-whisper (English) → StepFun/Doubao/
-  Whisper API (paid fallback). Docker support, REST API server, 9 workflow scenarios. Use when
+  End-to-end video subtitle pipeline — Chrome Extension real-time bilingual subtitles (multi-platform, 12 languages) + offline pipeline (transcribe, translate, TTS dub, burn). Free-first strategy: FunASR (Chinese) / faster-whisper (English) → paid API fallback. Translation Memory caching, Docker support, REST API server, 10 workflow scenarios. Use when
   adding subtitles to video, translating SRT files, dubbing with TTS, burning captions into MP4,
   setting up a subtitle pipeline, or localizing video content. Triggers on: 给视频加字幕, 做字幕,
   SRT翻译, 字幕翻译, 配音, 烧字幕, 硬字幕, 视频字幕管线, subtitle pipeline, add subtitles to
@@ -21,6 +18,7 @@ description: >-
 给这个视频加上中文字幕
 把这个 SRT 翻译成英文
 把字幕烧进视频
+打开实时双语字幕
 ```
 
 Claude 会自动加载本技能并执行对应的脚本。
@@ -28,7 +26,13 @@ Claude 会自动加载本技能并执行对应的脚本。
 ## 独立使用（终端）
 
 ```bash
-# 一键管线
+# Chrome 扩展（实时翻译）
+# Chrome → 扩展程序 → 开发者模式 → 加载 extension/ 目录
+
+# 实时翻译后端
+python3 integration/realtime_server.py --port 8739 &
+
+# 一键离线管线
 bash integration/pipeline.sh "https://youtube.com/watch?v=VIDEO"
 
 # 翻译 SRT

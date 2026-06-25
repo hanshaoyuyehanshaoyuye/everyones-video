@@ -73,6 +73,7 @@ StepFun 在长音频场景表现突出：
 ```bash
 # 一键安装（含 FunASR + faster-whisper）
 pip install -r requirements-full.txt
+```
 
 ## StepFun 的限制
 

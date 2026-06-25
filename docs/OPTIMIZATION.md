@@ -1,6 +1,6 @@
 # 省钱优化指南
 
-**pipeline.sh 的设计哲学：能免费，不付费。能跳过，不重复。**
+**pipeline.sh 的设计哲学：能免费，不付费。能跳过，不重复。能缓存，不重算。**
 
 ## 逐步骤优化策略
 
@@ -134,9 +134,11 @@ pip install -r requirements-full.txt
 ## 省钱清单
 
 - [ ] 所有 YouTube 视频先跑 yt-dlp 字幕检查（pipeline.sh 已内置）
+- [ ] Chrome 实时翻译复用 TM 缓存，第二次看同一视频零 API 调用
 - [ ] 中文场景能用 FunASR 不用 StepFun
 - [ ] 英文场景能用 faster-whisper 不用 Whisper API
 - [ ] StepFun 输出的纯文本用 text_to_srt.py 桥接，不重新转写
 - [ ] 翻译和烧录用 Claude Code 技能，不另付 API 费
+- [ ] TM fuzzy match 复用相似翻译，减少 API 调用
 - [ ] 会议/访谈不需要翻译就直接用，跳过 Step 4-5
 - [ ] 首次安装 FunASR 或 faster-whisper 的模型下载是一次性的

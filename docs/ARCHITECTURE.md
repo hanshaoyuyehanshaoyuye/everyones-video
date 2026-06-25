@@ -1,10 +1,33 @@
 # Architecture Decision Records
 
-## ADR-1: 多引擎路由而非单一引擎
+## ADR-1: 双模式架构 — Chrome 实时 + 离线管线
 
 ### 背景
 
-需要为视频字幕管线选择 ASR（语音识别）引擎。考虑过用单一引擎覆盖所有场景。
+v1-v5 只有离线管线模式。v6 新增 Chrome Extension 实时翻译，两种模式共享翻译引擎和 TM。
+
+### 决策
+
+**双模式：Chrome Extension（实时） + pipeline.sh（离线管线），共享 TM + LLM 后端。**
+
+```
+用户需求
+  ├── 看视频想要实时字幕 → Chrome Extension (content.js + realtime_server.py)
+  └── 要成品视频出片     → pipeline.sh (ASR → 翻译 → TTS → 烧录)
+                │
+                └── 共享: TM 翻译记忆库 + LLM 翻译后端
+```
+
+### 理由
+
+1. **实时翻译**不走 ASR——劫持平台自带字幕，直接翻译，零等待
+2. **离线管线**走完整 ASR→翻译→配音→烧录，适合出片
+3. **TM 共享**：两种模式的翻译结果都写入 TM，互相受益
+4. **零耦合**：realtime_server.py 和 pipeline.sh 可以独立运行
+
+---
+
+## ADR-2: 多引擎路由而非单一引擎
 
 ### 决策
 
@@ -15,6 +38,7 @@
 ```
 输入音频 → 检测源语言 + 是否有 YouTube 自动字幕
   ├── YouTube → 有自动字幕 → yt-dlp 直接下载 (免费, 1秒)
+  ├── Chrome 实时 → 劫持平台字幕 × TM+LLM (免费, 拦截模式)
   ├── 中文+免费 → FunASR (阿里达摩院, 本地运行, 时间戳+VAD)
   ├── 中文+付费+高精度 → 豆包 (Volcano ASR)
   ├── 中文+付费+极速 → StepFun (85-101× RTF)
@@ -22,20 +46,27 @@
   └── 英文+付费 → OpenAI Whisper API (word-level timestamps)
 ```
 
-### 理由
-
-- **yt-dlp 字幕提取**覆盖 80% 的 YouTube 英文视频和越来越多的中文视频——零成本，应该排在第一位
-- **FunASR** 是阿里达摩院开源的工业级中文 ASR，带 VAD（语音端点检测）、标点恢复、时间戳，本地运行零成本，中文准确度接近豆包
-- **faster-whisper** 基于 CTranslate2，比原版 whisper 快 4×，GPU/CPU 通用
-- 付费引擎是兜底方案——当免费方案不满足精度/速度需求时使用
-
 ---
 
-## ADR-2: 转写和翻译分两步而非端到端
+## ADR-3: 翻译记忆库 TM — 缓存优于重复计算
 
 ### 背景
 
-有些 ASR 服务（如 YouTube 自动字幕）直接输出翻译结果。考虑过一步到位。
+同一视频反复观看或同一句话在不同视频中重复出现，每次都调 LLM 翻译浪费 API 费和延迟。
+
+### 决策
+
+**所有翻译先查 TM（JSON-based，exact+fuzzy 匹配），命中直接返回，未命中再调 LLM 并写入 TM。**
+
+### 理由
+
+1. **Chrome Extension 模式下 TM 是必须的**：每帧字幕变化都调 LLM 会又慢又贵
+2. **同视频复看 100% 缓存命中**：TM 自动落盘，第二次观看零 API 调用
+3. **跨视频复用**：fuzzy match (difflib ≥80%) 复用相似句子的翻译
+
+---
+
+## ADR-4: 转写和翻译分两步而非端到端
 
 ### 决策
 
@@ -43,47 +74,24 @@
 
 ### 理由
 
-1. **可审查**：源语言 SRT 可以先检查有没有转写错误，再翻译
-2. **可替换**：对翻译质量不满意，可以只换翻译引擎，不用重新转写
+1. **可审查**：源语言 SRT 可以先检查有没有转写错误
+2. **可替换**：可以只换翻译引擎，不用重新转写
 3. **可复用**：一份 source SRT 可以翻成多种语言
-4. **质量更高**：LLM 做纯翻译比 LLM 同时做转写+翻译质量高
-
-### 代价
-
-- 多一步操作
-- 两步 API 调用成本略高于一步
-
-### 放弃的替代方案
-
-- **端到端转写+翻译**：更快但质量不可控，无法审查中间结果
+4. **质量更高**：LLM 做纯翻译比同时做转写+翻译质量高
 
 ---
 
-## ADR-3: Claude Code 技能编排而非独立 CLI
-
-### 背景
-
-考虑过做成一个独立的 CLI 工具（Python 包），不依赖 Claude Code。
+## ADR-5: Claude Code 技能 + 独立 CLI 双模
 
 ### 决策
 
-**封装为 Claude Code 技能，通过技能间的管道编排实现流水线。**
+**封装为 Claude Code 技能，同时提供独立 CLI 入口（translate_srt.py / realtime_server.py / tts_dub.py），不绑定 Claude Code。**
 
 ### 理由
 
-1. **LLM-in-the-loop**：Claude 可以在翻译步骤做语义理解（补全省略的主语、修正口语化的不完整句），这是纯 CLI 做不到的
-2. **零配置复用**：每个技能是独立可用的，用户可以单独用"转写"或"翻译"，不一定要跑全管线
-3. **生态杠杆**：站在 jianshuo/claude-skills 和 stepfun-asr 的肩膀上，不重复造轮子
-
-### 代价
-
-- 依赖 Claude Code 运行环境
-- 依赖上游技能的持续维护
-
-### 放弃的替代方案
-
-- **独立 CLI**：更易分发但不具备 LLM 的语义理解能力
-- **SaaS 服务**：太重，不适合开源项目
+1. **Claude Code 用户**：技能间管道编排，LLM-in-the-loop 语义理解
+2. **非 Claude Code 用户**：pip install 后直接命令行使用，无需 Claude Code
+3. **Chrome Extension**：只依赖 realtime_server.py，不依赖 Claude Code
 
 ---
 
@@ -91,8 +99,11 @@
 
 | 层 | 技术 | 说明 |
 |----|------|------|
-| 编排 | Claude Code Skills | 技能发现、路由、LLM 调用 |
-| 音频提取 | yt-dlp + ffmpeg | YouTube 下载 + 格式转换 |
-| ASR | 豆包/StepFun/Whisper | 三引擎路由 |
-| 翻译 | LLM (Qwen/DeepSeek/Claude) | 语义级翻译+重分段 |
+| 实时翻译 | Chrome Extension MV3 + HTTP backend | content.js 劫持 + realtime_server.py |
+| 离线管线 | pipeline.sh + Python 脚本 | 五步管线：提取→ASR→翻译→配音→烧录 |
+| TM 缓存 | JSON + difflib | exact + fuzzy match，跨会话持久化 |
+| ASR | FunASR / faster-whisper / StepFun / 豆包 / Whisper | 五引擎路由 |
+| 翻译 | LLM (DeepSeek / Qwen / Ollama / OpenAI) | 任意 OpenAI 兼容接口 |
+| TTS | Edge-TTS | 免费，100+ 语种，神经质量 |
 | 合成 | ffmpeg + libass | 字幕烧录/软字幕 |
+| 安全 | rate limit + body limit + lang whitelist + CORS | 实时服务安全加固 |
