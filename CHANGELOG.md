@@ -4,7 +4,7 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [6.2.0] — Unreleased
+## [6.2.0] — 2026-06-25
 
 ### Security
 - **realtime_server.py 加固**: 体大小限制 (100KB→413)、费率限制 (/translate 100/min, /batch 20/min)、文本长度限制 (500/200chars)、语言码白名单、安全头。
@@ -19,20 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Extension 不再硬编码源语言 (之前 YouTube=en, Bilibili=zh), 全面切换为 auto。
 - `/detect-lang` POST endpoint: 接收字幕文本数组, 返回 `{lang, confidence}`。
-
-## [6.1.0] — Unreleased
-
-### Changed
 - **Extension 多平台支持**: 不再只限 YouTube。
-  - `content.js`: 平台检测层 + 4 种字幕源适配器。
-  - **YouTube**: timedtext XML 拦截 (原有)。
-  - **Bilibili**: player.getCaptions() API + subtitle API 代理。
-  - **&lt;track&gt; WebVTT**: 任意 `<video>` + `<track kind="subtitles">` 自动拉取 WebVTT (Vimeo/Coursera/…)。
-  - **通用 fetch**: 拦截所有 XHR/fetch 中 SRT/VTT/JSON 字幕响应, 兜底未知平台。
+  - `content.js`: 平台检测层 + 4 种字幕源适配器 (YouTube/Bilibili/WebVTT/通用 fetch)。
   - `manifest.json`: host_permissions 放宽到 `https://*/*`。
 - JSON 字幕解析: 支持 5 种常见格式 (YouTube JSON / Bilibili body / WebVTT / SRT / word-level)。
 
-## [6.0.0] — Unreleased
+## [6.0.0] — 2026-06-24
 
 ### Added
 - **Chrome Extension** (`extension/`): YouTube 实时双语字幕, MIT 开源, 零下载零等待。
@@ -45,7 +37,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - 复用现有 TM + call_llm, 无额外依赖。
   - TM 自动落盘, 同视频复看 100% 缓存命中。
 
-## [5.2.0] — Unreleased
+## [5.3.0] — 2026-06-24
+
+### Added
+- **Docker ghcr.io push**: CI auto-builds + pushes to `ghcr.io/hanshaoyuyehanshaoyuye/everyones-video` on main push.
+
+### Changed
+- `Dockerfile`: added edge-tts, WhisperX opt-in build arg, TM volume, HF_TOKEN env.
+- `docker-compose.yml`: added TM volume mount, HF_TOKEN passthrough.
+
+## [5.2.0] — 2026-06-24
 
 ### Added
 - **Translation Memory (TM)**: `integration/tm.py` — JSON-based translation memory, zero extra dependencies.
@@ -55,13 +56,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - CLI: `python integration/tm.py stats|export|import|clear`.
 - `translate_srt.py --tm-path` / `--no-tm` flags: control TM behavior.
 - `translate_srt.py` batch flow: pre-filters exact TM hits before LLM call, reports cache hit count.
-- **Docker ghcr.io push**: CI auto-builds + pushes to `ghcr.io/hanshaoyuyehanshaoyuye/everyones-video` on main push.
 
-### Changed
-- `Dockerfile`: added edge-tts, WhisperX opt-in build arg, TM volume, HF_TOKEN env.
-- `docker-compose.yml`: added TM volume mount, HF_TOKEN passthrough.
-
-## [5.1.0] — Unreleased
+## [5.1.0] — 2026-06-24
 
 ### Added
 - **faster-whisper speaker diarization**: `faster_whisper_run.py --diarize` via WhisperX + pyannote.audio. English multi-speaker scenarios now have speaker-labeled SRT output.
@@ -72,7 +68,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `requirements-full.txt`: added `whisperx>=3.1.1` for diarization.
 - `docs/ASR_COMPARISON.md`: updated comparison table with speaker diarization row.
 
-## [5.0.0] — Unreleased
+## [5.0.0] — 2026-06-24
 
 ### Added
 - **Speaker diarization**: `funasr_run.py --diarize` + `pipeline.sh --diarize` (FunASR cam++ model). Multi-speaker scenarios now separate who said what.
