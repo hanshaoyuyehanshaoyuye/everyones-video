@@ -5,10 +5,11 @@
 [![Tests](https://img.shields.io/badge/tests-58%20passed-brightgreen)](https://github.com/hanshaoyuyehanshaoyuye/everyones-video/blob/main/tests/test_core.py)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://ghcr.io)
+[![Languages](https://img.shields.io/badge/语言-12_语种-blue)]()
 
-> **两大模式：实时翻译 + 离线出片。免费优先，MIT 开源。** / Real-time translation + offline pipeline. Free first, MIT licensed.
+> **两大模式 + 12 语种：实时翻译 + 离线出片。免费优先，MIT 开源。** / Real-time translation + offline pipeline. Free first, MIT licensed.
 
-**Chrome 扩展**：打开 YouTube 自动双语字幕，零下载零等待。**离线管线**：一句话从 URL/文件到成品视频，Claude Code 技能 + 独立 CLI 双模。
+**Chrome 扩展**：打开 YouTube/Bilibili 自动双语字幕，12 语种任意互译，零下载零等待。**离线管线**：一句话从 URL/文件到成品视频，Claude Code 技能 + 独立 CLI 双模。
 
 ---
 
@@ -20,6 +21,7 @@
 |------|:--:|:--:|:--:|:--:|:--:|
 | **许可** | **MIT** | GPL-3.0 | Apache 2.0 | 待确认 | MIT |
 | **Chrome 实时翻译** | **✅ v6.2** | — | — | — | — |
+| **12 语种翻译** | **✅ 中日韩俄德法西葡阿** | 部分 | 部分 | — | — |
 | **整管线 ¥0 跑通** | **✅** | 需配 API | 需配 API | 需配 API | 需配 API |
 | **Docker + API Server** | **✅** | — | — | — | — |
 | **翻译记忆库 TM** | **✅** | — | — | — | — |
@@ -36,6 +38,26 @@
 > **Docker 部署：** 跑在服务器上、集成到 CI/CD、被其他工具调用 — 从本机工具到平台组件。
 
 同赛道还有很多优秀项目：[pyvideotrans](https://github.com/jianchang512/pyvideotrans)（18k★，GUI + 声克隆）、[VideoLingo](https://github.com/Huanshere/VideoLingo)（17.5k★，Netflix 级字幕质量）、[Mazinger](https://github.com/bakrianoo/mazinger)（10 段式管线）、[jianshuo/claude-skills](https://github.com/jianshuo/claude-skills)（15 个视频创作技能）。各有千秋，按需选择。
+
+---
+
+## 多语种翻译
+
+**12 语种互通：中文、English、日本語、한국어、Русский、Deutsch、Français、Español、Português、العربية — 任意方向互译。**
+
+| 源语言 | 自动检测方式 |
+|--------|-------------|
+| 🇨🇳 中文 | CJK 统一汉字检测 (4E00-9FFF) |
+| 🇬🇧 English | 拉丁字母，默认回退 |
+| 🇯🇵 日本語 | 平假名 (3040-309F) + 片假名 (30A0-30FF) |
+| 🇰🇷 한국어 | 韩文音节 (AC00-D7AF) |
+| 🇷🇺 Русский | 西里尔字母 (0400-04FF) |
+| 🇩🇪🇫🇷🇪🇸🇧🇷 拉丁语系 | Unicode Latin 检测，用户手动区分 |
+| 🇸🇦 العربية | 阿拉伯字母 (0600-06FF) |
+
+- **离线管线**: `python3 integration/translate_srt.py input.srt --to ja`（日/韩/俄/德/法/西/葡/阿均支持）
+- **实时翻译**: Chrome Extension 自动检测或手动选择，`Alt+L` 切换语言
+- **LLM 后端**: DeepSeek / OpenAI / Ollama 均支持多语种 prompt
 
 ---
 
