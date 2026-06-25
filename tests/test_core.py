@@ -5,12 +5,14 @@ import sys
 import tempfile
 
 import pytest
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "integration"))
 
 from translate_srt import parse_srt, format_srt, ts_to_sec, sec_to_ts, re_segment
 from text_to_srt import split_sentences, format_timestamp, estimate_duration, text_to_srt
 from subtitle_quality import enforce as sqi_enforce, diagnose, parse_srt as sqi_parse, format_srt as sqi_format
+from tm import TranslationMemory
 from eval import load, record, recommend, stats as eval_stats
 import eval as eval_module
 
@@ -315,3 +317,74 @@ Third
         f2, _ = sqi_enforce(f1, "en")
         assert ts_to_sec(f2[0]["end"]) >= ts_to_sec(f1[0]["end"]) - 0.01
         assert ts_to_sec(f2[1]["start"]) >= ts_to_sec(f2[0]["end"]) - 0.01
+
+
+# ── TM 翻译记忆库测试 ─────────────────────────────────
+
+class TestTM:
+
+    def test_exact_lookup(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "tm.json"))
+        tm.store("Hello", "你好", "en", "zh")
+        tm.flush()
+        assert tm.lookup_exact("Hello", "en", "zh") == "你好"
+        assert tm.lookup_exact("Hello ", "en", "zh") == "你好"  # normalize strips
+        assert tm.lookup_exact("  Hello world  ", "en", "zh") is None
+
+    def test_fuzzy_lookup(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "tm.json"))
+        tm.store("Hello world", "你好世界", "en", "zh")
+        tm.store("Good morning", "早上好", "en", "zh")
+        tm.flush()
+        results = tm.lookup_fuzzy("Hello world!", "en", "zh", threshold=0.80)
+        assert len(results) >= 1
+        assert results[0][1] == "你好世界"
+        assert results[0][2] >= 0.85
+
+    def test_fuzzy_below_threshold(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "tm.json"))
+        tm.store("Hello world", "你好世界", "en", "zh")
+        tm.flush()
+        results = tm.lookup_fuzzy("完全不同的句子", "en", "zh", threshold=0.80)
+        assert results == []
+
+    def test_store_batch(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "tm.json"))
+        tm.store_batch(
+            [("Hello", "你好"), ("World", "世界")], "en", "zh"
+        )
+        assert tm.lookup_exact("Hello", "en", "zh") == "你好"
+        assert tm.lookup_exact("World", "en", "zh") == "世界"
+
+    def test_stats(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "tm.json"))
+        tm.store("Hello", "你好", "en", "zh")
+        tm.store("你好", "Hello", "zh", "en")
+        tm.flush()
+        s = tm.stats()
+        assert s["en→zh"] == 1
+        assert s["zh→en"] == 1
+
+    def test_persistence(self, tmp_path):
+        p = str(tmp_path / "tm.json")
+        tm = TranslationMemory(p)
+        tm.store("test", "测试", "en", "zh")
+        tm.flush()
+        tm2 = TranslationMemory(p)
+        assert tm2.lookup_exact("test", "en", "zh") == "测试"
+
+    def test_empty_graceful(self, tmp_path):
+        tm = TranslationMemory(str(tmp_path / "nonexistent.json"))
+        assert tm.stats() == {}
+        assert tm.lookup_exact("anything", "en", "zh") is None
+        assert tm.lookup_fuzzy("anything", "en", "zh") == []
+
+    def test_atomic_write_no_corruption(self, tmp_path):
+        p = str(tmp_path / "tm.json")
+        tm = TranslationMemory(p)
+        tm.store("key", "value", "en", "zh")
+        tm.flush()
+        # Verify no .tmp residue after successful write
+        assert not Path(p + ".tmp").exists()
+        # Content is valid JSON
+        assert json.loads(Path(p).read_text(encoding="utf-8"))

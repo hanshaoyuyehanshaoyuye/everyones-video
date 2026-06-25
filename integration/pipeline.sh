@@ -32,6 +32,7 @@ DO_DUB=false
 DO_BURN=false
 DO_DIARIZE=false
 DO_REFLECT=false
+DO_SQI=true  # v7.0: SQI runs by default after translation
 START_STEP=1
 RESUME=false
 DRY_RUN=false

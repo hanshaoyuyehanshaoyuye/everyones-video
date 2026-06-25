@@ -18,6 +18,7 @@ Usage:
 
 import json
 import os
+import sys
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -35,6 +36,13 @@ class TranslationMemory:
     def _load(self):
         if self._loaded:
             return
+        # Clean up stale .tmp from a previous interrupted write
+        stale = self.path.with_suffix(".tmp")
+        if stale.exists():
+            try:
+                stale.unlink()
+            except OSError:
+                pass
         if self.path.exists():
             try:
                 raw = self.path.read_text(encoding="utf-8")

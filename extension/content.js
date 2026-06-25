@@ -6,6 +6,15 @@
 (function () {
   'use strict';
 
+  // Polyfill: AbortSignal.timeout() (Chrome 103+, missing in older Chromium/Firefox ext)
+  if (typeof AbortSignal !== 'undefined' && !AbortSignal.timeout) {
+    AbortSignal.timeout = ms => {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(new DOMException('Timeout', 'TimeoutError')), ms);
+      return ctrl.signal;
+    };
+  }
+
   const SERVER = 'http://127.0.0.1:8739';
   const POLL_MS = 250;
   const OVERLAY_ID = 'ev-overlay-root';
