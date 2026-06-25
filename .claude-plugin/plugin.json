@@ -1,6 +1,6 @@
 {
   "name": "everyones-video",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "description": "Real-time bilingual subtitles (Chrome Extension) + offline video pipeline. SQI subtitle quality engine (overlap fix, duration cap, CPS check). Multi-platform (YouTube/Bilibili/WebVTT), 12-language auto-detect, TM caching. Free-first, MIT.",
   "author": {
     "name": "hanshaoyuyehanshaoyuye",

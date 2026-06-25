@@ -25,7 +25,7 @@
 | **整管线 ¥0 跑通** | **✅** | 需配 API | 需配 API | 需配 API | 需配 API |
 | **Docker + API Server** | **✅** | — | — | — | — |
 | **翻译记忆库 TM** | **✅** | — | — | — | — |
-| **SQI 字幕质量引擎** | **✅ v7.0** | — | — | — | — |
+| **SQI 字幕质量引擎** | **✅ v8.0** | — | — | — | — |
 | **安全加固** | **✅** | — | — | — | — |
 | **Claude Code 技能** | **✅ 4 个** | — | — | — | ✅ 15 个 |
 | 说话人分离 | ✅ FunASR + WhisperX | ✅ | ✅ | — | — |
@@ -366,7 +366,7 @@ bash integration/batch_pipeline.sh ~/videos/ --lang zh --translate --parallel 4
 python3 integration/eval_quality.py source.srt translated.srt --from en --to zh-CN
 ```
 
-### 8. 字幕质量修复 (SQI — v7.0)
+### 8. 字幕质量修复 (SQI — v8.0)
 
 ```bash
 # 修复重叠、过长/过短、间距问题
@@ -436,7 +436,7 @@ docker compose up api
 | [integration/reflect_fix.py](integration/reflect_fix.py) | 翻译反思修复 (GEMBA-MQM → LLM → 再评) |
 | [integration/tts_dub.py](integration/tts_dub.py) | SRT → TTS 配音 (Edge-TTS) |
 | [integration/eval_quality.py](integration/eval_quality.py) | GEMBA-MQM 翻译质量评分 |
-| [integration/subtitle_quality.py](integration/subtitle_quality.py) | SQI 字幕质量引擎 (重叠修复/时长截断/CPS检查) — v7.0 |
+| [integration/subtitle_quality.py](integration/subtitle_quality.py) | SQI 字幕质量引擎 (重叠修复/时长截断/CPS检查) — v8.0 |
 | [integration/batch_pipeline.sh](integration/batch_pipeline.sh) | 批量处理（并行+日志） |
 | [skills/](skills/) | 四个 Claude Code 技能 |
 | [Dockerfile](Dockerfile) | Docker 镜像（多阶段） |

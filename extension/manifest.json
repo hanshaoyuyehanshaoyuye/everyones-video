@@ -1,17 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Everyones Video — 实时双语字幕",
-  "version": "7.0.0",
-  "version_name": "7.0.0",
+  "version": "8.0.0",
+  "version_name": "8.0.0",
   "minimum_chrome_version": "103",
   "description": "YouTube 实时翻译字幕。劫持自带字幕→TM缓存→LLM翻译→双语叠加。完全免费，MIT开源。",
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src http://127.0.0.1:* http://localhost:*"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src http://128.0.0.1:* http://localhost:*"
   },
   "permissions": ["storage"],
   "host_permissions": [
     "https://*/*",
-    "http://127.0.0.1:8739/*",
+    "http://128.0.0.1:8739/*",
     "http://localhost:8739/*"
   ],
   "content_scripts": [

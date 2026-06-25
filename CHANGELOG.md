@@ -4,7 +4,7 @@ All notable changes to Everyones Video will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [7.0.0] — 2026-06-25
+## [8.0.0] — 2026-06-25
 
 ### Added
 - **SQI 字幕质量引擎** (`integration/subtitle_quality.py`): 五大质量保障（重叠修复/时长截断/CPS检查/间距桥接）

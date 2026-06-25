@@ -8,7 +8,7 @@ description: >-
   video, transcribe audio to SRT, TTS dub, burn captions, video localization, 字幕, 语音转文字, SRT.
 ---
 
-# Everyones Video v7.0
+# Everyones Video v8.0
 
 一站式视频字幕管线。12 语种实时翻译 + 离线管线。从音频/YouTube → SRT → 翻译 → SQI 质量修复 → 烧录成品。
 
