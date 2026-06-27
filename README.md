@@ -7,6 +7,8 @@
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://ghcr.io)
 [![12 Languages](https://img.shields.io/badge/languages-12-blue)]()
 
+<img src="docs/demo.gif" width="640" alt="Terminal demo: one command → subtitled video">
+
 > **Two modes + 12 languages. Real-time browser translation + one-command offline pipeline. Free first, MIT open source.**
 
 **Chrome Extension**: Auto bilingual subtitles on YouTube/Bilibili/Vimeo — zero download, zero wait. **Offline Pipeline**: URL or local file → finished subtitled video in one command.
