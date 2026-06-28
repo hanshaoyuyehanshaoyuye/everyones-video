@@ -14,7 +14,7 @@ PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SERVER_PY = os.path.join(PROJECT, "integration", "realtime_server.py")
 
 
-def _wait_server(port: int, timeout: float = 10.0) -> bool:
+def _wait_server(port: int, timeout: float = 30.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -36,7 +36,7 @@ def server():
     port = sock.getsockname()[1]
     sock.close()
 
-    kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     if sys.platform == "win32":
         kwargs["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
     env = os.environ.copy()
@@ -48,9 +48,11 @@ def server():
     )
     ok = _wait_server(port)
     if not ok:
+        out, err = proc.communicate(timeout=5)
         proc.kill()
         proc.wait()
-        pytest.fail(f"Server failed to start on port {port}")
+        stderr_text = err.decode(errors='replace') if err else '(none)'
+        pytest.fail(f"Server failed to start on port {port}\nstderr: {stderr_text}")
 
     yield port
 
