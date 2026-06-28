@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
-        run: pip install "pytest>=8,<10" "pytest-cov>=5,<8"
+        run: pip install pytest pytest-cov
       - name: Run pytest with coverage
         run: python -m pytest tests/ -v --tb=short --cov=integration --cov-report=term-missing --cov-fail-under=20
 
