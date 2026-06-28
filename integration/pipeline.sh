@@ -32,7 +32,7 @@ DO_DUB=false
 DO_BURN=false
 DO_DIARIZE=false
 DO_REFLECT=false
-DO_SQI=true  # v7.0: SQI runs by default after translation
+DO_SQI=true  # v7.0: SQI runs by default after translation (use --no-sqi to skip)
 START_STEP=1
 RESUME=false
 DRY_RUN=false
@@ -53,6 +53,7 @@ while [ $# -gt 0 ]; do
         --resume) RESUME=true; shift ;;
         --dry-run) DRY_RUN=true; shift ;;
         --quiet) VERBOSE=false; shift ;;
+        --no-sqi) DO_SQI=false; shift ;;
         --help|-h)
             echo "用法: pipeline.sh <YouTube URL | 音频文件> [选项]"
             echo ""
@@ -77,6 +78,7 @@ while [ $# -gt 0 ]; do
             echo "  --resume             从上次失败处继续"
             echo "  --dry-run            仅预览步骤，不执行"
             echo "  --quiet              减少输出"
+            echo "  --no-sqi             跳过字幕质量检查 (SQI)"
             echo "  --help               显示帮助"
             exit 0
             ;;
@@ -120,7 +122,7 @@ step1() {
 
         # 找下载的字幕文件 (separate declaration from assignment for set -e)
         local found_sub
-        found_sub=$(ls -t "$WORK_DIR"/*.srt 2>/dev/null | head -1 || true)
+        found_sub=$(find "$WORK_DIR" -maxdepth 1 -name "*.srt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
         if [ -n "$found_sub" ] && [ -s "$found_sub" ]; then
             cp "$found_sub" "$srt_file"
             echo "  🎯 找到已有字幕！跳过 ASR (省时省钱)"
@@ -147,7 +149,7 @@ step1() {
         yt-dlp -x --audio-format mp3 --audio-quality 0 \
             -o "$WORK_DIR/audio.%(ext)s" "$INPUT" 2>"$WORK_DIR/yt_audio.log"
         local downloaded
-        downloaded=$(ls -t "$WORK_DIR"/audio.* 2>/dev/null | head -1 || true)
+        downloaded=$(find "$WORK_DIR" -maxdepth 1 -name "audio.*" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
         if [ -f "$downloaded" ] && [ "$downloaded" != "$audio_file" ]; then
             ffmpeg -i "$downloaded" -codec:a libmp3lame -qscale:a 2 "$audio_file" -y \
                 2>"$WORK_DIR/ffmpeg_step1.log"
@@ -496,7 +498,7 @@ if [ "$DO_REFLECT" = true ] && [ "$DO_TRANSLATE" = true ]; then
     step4_reflect; save_state 5.5
 fi
 
-if [ "$DO_TRANSLATE" = true ]; then
+if [ "$DO_TRANSLATE" = true ] && $DO_SQI; then
     step4c_sqi; save_state 5.6
 fi
 
@@ -505,7 +507,7 @@ if [ "$DO_DUB" = true ]; then
 fi
 
 if [ "$DO_BURN" = true ]; then
-    step5_burn; save_state done
+    step5_burn; save_state "done"
 fi
 
 rm -f "$STATE_FILE"
