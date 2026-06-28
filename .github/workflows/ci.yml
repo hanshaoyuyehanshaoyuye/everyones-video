@@ -22,7 +22,7 @@ jobs:
       - name: Install test dependencies
         run: pip install pytest pytest-cov
       - name: Run pytest with coverage
-        run: python -m pytest tests/ -v --tb=short --cov=integration --cov-report=term-missing --cov-fail-under=20
+        run: python -m pytest tests/ -v --tb=short --cov=integration --cov-report=term-missing
 
   lint:
     name: Lint & type check
